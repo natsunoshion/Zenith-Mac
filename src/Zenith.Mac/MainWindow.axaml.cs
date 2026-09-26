@@ -263,6 +263,7 @@ public partial class MainWindow : Window
         list.ItemTemplate = new FuncDataTemplate<string>((name, _) => PaletteLabel(AssetRoot, name!));
         list.ItemsSource = values;
         list.SelectedItem = values.Contains(selected) ? selected : values.FirstOrDefault(v => v == "Random") ?? values.FirstOrDefault();
+        UpdatePaletteDeleteButton(list.SelectedItem as string);
         if (randomized.HasValue) State.RandomizePalette = randomized.Value;
         settingItems = false;
         if (this.FindControl<ContentControl>("BuiltinSettingsHost")!.IsVisible) builtinBuilder?.SetPalettes(values);
@@ -284,7 +285,20 @@ public partial class MainWindow : Window
         State.RandomizePalette = checkbox.IsChecked == true;
         ActionRequested?.Invoke("randomize-palette");
     }
-    private void PaletteSelected(object? sender, SelectionChangedEventArgs e) { if (!settingItems && sender is ListBox { SelectedItem: string palette }) PaletteChanged?.Invoke(palette); }
+    private void PaletteSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox list)
+        {
+            string? palette = list.SelectedItem as string;
+            UpdatePaletteDeleteButton(palette);
+            if (!settingItems && palette != null) PaletteChanged?.Invoke(palette);
+        }
+    }
+    private void UpdatePaletteDeleteButton(string? palette)
+    {
+        if (this.FindControl<Button>("DeletePaletteButton") is { } button)
+            button.IsEnabled = palette != null && PaletteDocument.CanDelete(palette);
+    }
     private static void SetImage(Image target, string? path) { target.Source = path != null && File.Exists(path) ? new Bitmap(path) : null; }
     private static void SetImage(Image target, byte[]? bytes) { target.Source = bytes is { Length: > 0 } ? new Bitmap(new MemoryStream(bytes)) : null; }
     public void SetBuiltinSettings(string moduleId, object settings)

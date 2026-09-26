@@ -22,6 +22,8 @@
     <SolidColorBrush x:Key="ZenithButtonBrush">#293D30</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithButtonHoverBrush">#3B5744</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithButtonPressedBrush">#4A6D54</SolidColorBrush>
+    <SolidColorBrush x:Key="ZenithListHoverBrush">#26392C</SolidColorBrush>
+    <SolidColorBrush x:Key="ZenithListSelectedHoverBrush">#3C6646</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithAccentBrush">#69C778</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithPrimaryBrush">#2E7D32</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithPrimaryHoverBrush">#469D50</SolidColorBrush>
@@ -33,7 +35,7 @@
     <SolidColorBrush x:Key="ZenithInfoBrush">#88BDF4</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithErrorBrush">#E58B8B</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithWarningBrush">#E8BD71</SolidColorBrush>
-    <SolidColorBrush x:Key="ZenithPreviewWellBrush">#111813</SolidColorBrush>
+    <SolidColorBrush x:Key="ZenithPreviewWellBrush">#1A251E</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithCloseHoverBrush">#A84D4D</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithClosePressedBrush">#913C3C</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithOnDangerBrush">#FFFFFF</SolidColorBrush>
@@ -75,8 +77,11 @@
   <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
   <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
   <Style Selector="Button:disabled"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
-  <Style Selector="Button.palette-swatch"><Setter Property="BorderBrush" Value="Transparent"/></Style>
-  <Style Selector="Button.palette-swatch.selected"><Setter Property="BorderBrush" Value="{DynamicResource ZenithAccentBrush}"/></Style>
+  <Style Selector="Button.palette-swatch"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="3"/></Style>
+  <Style Selector="Button.palette-swatch:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithListHoverBrush}"/></Style>
+  <Style Selector="Button.palette-swatch:pressed"><Setter Property="Background" Value="{DynamicResource ZenithListSelectedHoverBrush}"/></Style>
+  <Style Selector="Border.palette-color-ring"><Setter Property="Background" Value="{DynamicResource ZenithSurfaceBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="BorderThickness" Value="1"/></Style>
+  <Style Selector="Border.palette-color-ring.selected"><Setter Property="BorderBrush" Value="{DynamicResource ZenithAccentBrush}"/><Setter Property="BorderThickness" Value="2"/></Style>
   <Style Selector="Button.primary"><Setter Property="Background" Value="{DynamicResource ZenithPrimaryBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithOnPrimaryBrush}"/><Setter Property="MinHeight" Value="32"/></Style>
   <Style Selector="Button.primary:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithPrimaryHoverBrush}"/></Style>
   <Style Selector="Button.primary:pressed"><Setter Property="Background" Value="{DynamicResource ZenithPrimaryPressedBrush}"/></Style>
@@ -123,14 +128,14 @@
   <Style Selector="NumericUpDown:focus-within /template/ ButtonSpinner /template/ Border#NumericSurface"><Setter Property="BorderBrush" Value="{DynamicResource ZenithAccentBrush}"/></Style>
   <Style Selector="NumericUpDown:disabled /template/ ButtonSpinner /template/ Border#NumericSurface"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/></Style>
   <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox:focus /template/ Border#PART_BorderElement, NumericUpDown /template/ TextBox#PART_TextBox:pointerover /template/ Border#PART_BorderElement, NumericUpDown /template/ TextBox#PART_TextBox:disabled /template/ Border#PART_BorderElement"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
-  <Style Selector="ComboBox"><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="8,3"/><Setter Property="Background" Value="{DynamicResource ZenithInputBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="HorizontalContentAlignment" Value="Left"/></Style>
+  <Style Selector="ComboBox"><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="9,3"/><Setter Property="Background" Value="{DynamicResource ZenithInputBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="9"/><Setter Property="HorizontalContentAlignment" Value="Left"/></Style>
   <!-- Fluent paints its disabled background on an inner template border;
        overriding only ComboBox.Background leaves that translucent white layer. -->
   <Style Selector="ComboBox:disabled"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
   <Style Selector="ComboBox:disabled /template/ Border#Background, ComboBox:disabled /template/ Border#HighlightBackground"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/></Style>
   <Style Selector="ComboBox:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
   <Style Selector="ComboBox:disabled /template/ TextBlock, ComboBox:disabled TextBlock"><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
-  <Style Selector="ComboBoxItem"><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/><Setter Property="Padding" Value="8,6"/><Setter Property="CornerRadius" Value="6"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+  <Style Selector="ComboBoxItem"><Setter Property="MinHeight" Value="34"/><Setter Property="Margin" Value="3,2"/><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="8"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
   <Style Selector="ComboBoxItem /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/></Style>
   <!-- State selectors override Fluent's template-local 12px glyph geometry. -->
   <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph">
@@ -159,7 +164,8 @@
   <Style Selector="ListBoxItem"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="8,5"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/></Style>
   <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="{DynamicResource ZenithSelectionBrush}"/></Style>
   <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource ZenithSelectionBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithSelectionTextBrush}"/></Style>
-  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource ZenithListHoverBrush}"/></Style>
+  <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="{DynamicResource ZenithListSelectedHoverBrush}"/></Style>
   <Style Selector="TabControl"><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="0"/><Setter Property="ItemsPanel"><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></Setter></Style>
   <Style Selector="TabItem">
     <Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/>
@@ -169,4 +175,5 @@
   <Style Selector="TabItem:selected"><Setter Property="Background" Value="{DynamicResource ZenithSelectionBrush}"/></Style>
   <Style Selector="TabItem:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
   <Style Selector="ScrollViewer"><Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/></Style>
+  <Style Selector="ScrollBar /template/ Thumb"><Setter Property="CornerRadius" Value="4"/></Style>
 </Styles>

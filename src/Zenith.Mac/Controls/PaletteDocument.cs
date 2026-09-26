@@ -21,7 +21,21 @@ public sealed class PaletteDocument
         "Synthesia 10 Palette", "Synthesia 9-0.8 Palette", PfaConfigName
     };
 
-    public static bool IsProtectedName(string name) => protectedNames.Contains(name);
+    public static bool IsProtectedName(string name)
+    {
+        if (protectedNames.Contains(name)) return true;
+        string bundledPath = Path.Combine(AssetPaths.Resolve("Plugins/Assets/Palettes"), name + ".png");
+        return File.Exists(bundledPath);
+    }
+
+    public static bool CanDelete(string name) => !IsProtectedName(name) && FindPath(name) is { } path && File.Exists(path);
+
+    public static void Delete(string name)
+    {
+        if (IsProtectedName(name)) throw new InvalidOperationException("Built-in palettes cannot be deleted.");
+        string path = FindPath(name) ?? throw new FileNotFoundException("This custom palette no longer exists.");
+        File.Delete(path);
+    }
     public static PaletteDocument Create()
     {
         string[] colors = ["F05252", "F58B42", "E6BD3B", "9FCC45", "4AB96A", "36B5A2", "3EB8D7", "5295EA",

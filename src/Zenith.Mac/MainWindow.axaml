@@ -89,7 +89,7 @@
     <Grid Grid.Row="1" x:Name="ModuleSettingsPage" IsVisible="False" Margin="16">
       <TabControl x:Name="ScriptedTabs">
         <TabItem Header="{DynamicResource resourcesTab}">
-          <Grid Margin="0,8,0,0" ColumnDefinitions="190,*,180" ColumnSpacing="12">
+          <Grid Margin="0,8,0,0" ColumnDefinitions="1.15*,1.7*,1.15*" ColumnSpacing="12">
             <Border Classes="card"><Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
               <Button Content="{DynamicResource reloadList}" Tag="reload-skins" Click="ActionClick"/>
               <Button Grid.Row="1" Content="{DynamicResource reloadScript}" Tag="reload-script" Click="ActionClick"/>
@@ -97,12 +97,13 @@
               <Button Grid.Row="3" Content="{DynamicResource openFolder}" Tag="open-skins-folder" Click="ActionClick"/>
             </Grid></Border>
             <Border Grid.Column="1" Classes="card"><Grid RowDefinitions="*,Auto" RowSpacing="12"><Border Background="{DynamicResource ZenithPreviewWellBrush}" CornerRadius="8" ClipToBounds="True"><Image x:Name="SkinPreview" Stretch="Uniform"/></Border><TextBox Grid.Row="1" Text="{Binding SkinDescription}" MinHeight="90" MaxHeight="140" Classes="description" TextWrapping="Wrap" IsReadOnly="True"/></Grid></Border>
-            <Border Grid.Column="2" Classes="card"><Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="8">
+            <Border Grid.Column="2" Classes="card"><Grid RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="8">
               <Button Content="{DynamicResource palettes_reload}" Tag="reload-palettes" Click="ActionClick"/>
               <ListBox Grid.Row="1" x:Name="PalettesList" SelectionChanged="PaletteSelected"/>
               <CheckBox Grid.Row="2" Content="{DynamicResource palettes_randomise}" IsChecked="{Binding RandomizePalette}" IsCheckedChanged="RandomizePaletteChanged" FontSize="11"/>
-              <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="6"><Button Classes="primary" Content="New…" ToolTip.Tip="{DynamicResource palettes_new}" Tag="new-palette" Click="ActionClick" Padding="5,2" FontSize="12"/><Button Grid.Column="1" Content="Edit…" ToolTip.Tip="{DynamicResource palettes_edit}" Tag="edit-palette" Click="ActionClick" Padding="5,2" FontSize="12"/></Grid>
-              <Button Grid.Row="4" Content="{DynamicResource palettes_openFolder}" Tag="open-palettes-folder" Click="ActionClick" FontSize="12" Padding="5,2"/>
+              <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="6"><Button Classes="primary" Content="New" ToolTip.Tip="{DynamicResource palettes_new}" Tag="new-palette" Click="ActionClick" Padding="5,2" FontSize="12"/><Button Grid.Column="1" Content="Edit" ToolTip.Tip="{DynamicResource palettes_edit}" Tag="edit-palette" Click="ActionClick" Padding="5,2" FontSize="12"/></Grid>
+              <Button Grid.Row="4" x:Name="DeletePaletteButton" Content="Delete" ToolTip.Tip="Delete selected custom color set" Tag="delete-palette" Click="ActionClick" FontSize="12" Padding="5,2" IsEnabled="False"/>
+              <Button Grid.Row="5" Content="{DynamicResource palettes_openFolder}" Tag="open-palettes-folder" Click="ActionClick" FontSize="12" Padding="5,2"/>
             </Grid></Border>
           </Grid>
         </TabItem>

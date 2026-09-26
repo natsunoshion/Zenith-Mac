@@ -303,6 +303,9 @@ public sealed class AppController : IDisposable
             case "edit-palette":
                 await EditPalette(action == "edit-palette");
                 break;
+            case "delete-palette":
+                await DeletePalette();
+                break;
             default:
                 if (action.StartsWith("builtin:"))
                 {
@@ -329,6 +332,18 @@ public sealed class AppController : IDisposable
         Interlocked.Increment(ref version);
     }
 
+    async Task DeletePalette()
+    {
+        var selection = CurrentPalette;
+        string name = selection.SelectedImage;
+        if (!PaletteDocument.CanDelete(name)) { RefreshPaletteControls(); return; }
+        if (!await window.ConfirmAsync($"Delete custom palette “{name}”? This cannot be undone.")) return;
+        PaletteDocument.Delete(name);
+        selection.Reload();
+        RefreshPaletteControls();
+        Interlocked.Increment(ref version);
+    }
+
     async Task HandleBuiltin(string action)
     {
         var parts = action.Split(':', 3);
@@ -338,6 +353,7 @@ public sealed class AppController : IDisposable
         var name = parts[2];
         if (name == "reload-palettes") { await Handle("reload-palettes"); return; }
         if (name is "new-palette" or "edit-palette") { await EditPalette(name == "edit-palette"); return; }
+        if (name == "delete-palette") { await DeletePalette(); return; }
         if (id == "textured" && name.StartsWith("select-pack:", StringComparison.Ordinal))
         {
             await LoadSkin(name[12..]);

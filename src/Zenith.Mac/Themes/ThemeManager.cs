@@ -70,6 +70,9 @@ public static class ThemeManager
         string disabled = Mix(p.Input, p.Header, .6);
         string disabledText = Mix(p.Text, p.Surface, .52);
         string pressed = Mix(p.Hover, p.Text, .12);
+        string listHover = Mix(p.Surface, p.Accent, p.Dark ? .12 : .08);
+        string listSelectedHover = Mix(p.Selection, p.Accent, p.Dark ? .14 : .10);
+        string scrollbarThumb = Mix(p.Muted, p.Surface, .28);
         // Move away from the label luminance so pointer states retain its contrast.
         string primaryTarget = Luminance(p.OnPrimary) > Luminance(p.Primary) ? "#000000" : "#FFFFFF";
         string primaryHover = Mix(p.Primary, primaryTarget, .08);
@@ -77,15 +80,16 @@ public static class ThemeManager
         var colors = new Dictionary<string, string>
         {
             ["Window"] = p.Window, ["Surface"] = p.Surface, ["Header"] = p.Header,
-            ["Input"] = p.Input, ["InputHover"] = Mix(p.Input, p.Button, .35),
+            ["Input"] = p.Input, ["InputHover"] = Mix(p.Input, p.Button, .22),
             ["Disabled"] = disabled, ["Text"] = p.Text, ["MutedText"] = p.Muted,
             ["DisabledText"] = disabledText, ["Border"] = p.Border, ["BorderHover"] = p.Accent,
             ["Button"] = p.Button, ["ButtonHover"] = p.Hover, ["ButtonPressed"] = pressed,
             ["Accent"] = p.Accent, ["Primary"] = p.Primary, ["PrimaryHover"] = primaryHover,
             ["PrimaryPressed"] = primaryPressed, ["OnPrimary"] = p.OnPrimary,
             ["Selection"] = p.Selection, ["SelectionText"] = p.Text,
+            ["ListHover"] = listHover, ["ListSelectedHover"] = listSelectedHover,
             ["Success"] = p.Success, ["Info"] = p.Info, ["Error"] = p.Error,
-            ["Warning"] = p.Warning, ["PreviewWell"] = p.Window,
+            ["Warning"] = p.Warning, ["PreviewWell"] = p.Surface,
             ["CloseHover"] = p.Error, ["ClosePressed"] = Mix(p.Error, p.Dark ? "#FFFFFF" : "#000000", .14),
             ["OnDanger"] = p.Dark ? p.Window : "#FFFFFF"
         };
@@ -105,19 +109,30 @@ public static class ThemeManager
             ["TextControlPlaceholderForegroundPointerOver"] = p.Muted, ["TextControlPlaceholderForegroundDisabled"] = disabledText,
             ["ComboBoxBackground"] = p.Input, ["ComboBoxBackgroundPointerOver"] = colors["InputHover"],
             ["ComboBoxBackgroundPressed"] = p.Selection, ["ComboBoxBackgroundDisabled"] = disabled,
-            ["ComboBoxBorderBrush"] = p.Border, ["ComboBoxBorderBrushPointerOver"] = p.Accent,
+            ["ComboBoxBorderBrush"] = p.Border, ["ComboBoxBorderBrushPointerOver"] = Mix(p.Border, p.Accent, .4),
             ["ComboBoxBorderBrushPressed"] = p.Accent, ["ComboBoxBorderBrushDisabled"] = p.Border,
             ["ComboBoxForeground"] = p.Text, ["ComboBoxForegroundPointerOver"] = p.Text,
             ["ComboBoxForegroundPressed"] = p.Text, ["ComboBoxForegroundDisabled"] = disabledText,
             ["ComboBoxDropDownBackground"] = p.Surface, ["ComboBoxDropDownBorderBrush"] = p.Border,
-            ["ComboBoxItemBackgroundSelected"] = p.Selection, ["ComboBoxItemBackgroundSelectedPointerOver"] = p.Hover,
-            ["ComboBoxItemBackgroundPointerOver"] = p.Button, ["ComboBoxItemForegroundSelected"] = p.Text,
-            ["ListBoxItemBackgroundSelected"] = p.Selection, ["ListBoxItemBackgroundSelectedPointerOver"] = p.Hover,
-            ["ListBoxItemBackgroundPointerOver"] = p.Button, ["ListBoxItemForegroundSelected"] = p.Text,
+            ["ComboBoxItemBackgroundSelected"] = p.Selection, ["ComboBoxItemBackgroundSelectedPointerOver"] = listSelectedHover,
+            ["ComboBoxItemBackgroundPointerOver"] = listHover, ["ComboBoxItemForegroundSelected"] = p.Text,
+            ["ComboBoxItemBorderBrushPointerOver"] = "#00000000", ["ComboBoxItemBorderBrushSelectedPointerOver"] = "#00000000",
+            ["ListBoxItemBackgroundSelected"] = p.Selection, ["ListBoxItemBackgroundSelectedPointerOver"] = listSelectedHover,
+            ["ListBoxItemBackgroundPointerOver"] = listHover, ["ListBoxItemForegroundSelected"] = p.Text,
+            ["ScrollBarBackground"] = "#00000000", ["ScrollBarForeground"] = scrollbarThumb,
+            ["ScrollBarBorderBrush"] = "#00000000", ["ScrollBarTrackFill"] = "#00000000",
+            ["ScrollBarTrackFillPointerOver"] = Mix(p.Surface, p.Accent, .035),
+            ["ScrollBarTrackStroke"] = "#00000000", ["ScrollBarTrackStrokePointerOver"] = "#00000000",
+            ["ScrollBarPanningThumbBackground"] = scrollbarThumb,
+            ["ScrollBarThumbFillPointerOver"] = p.Accent, ["ScrollBarThumbFillPressed"] = p.Accent,
+            ["ScrollBarThumbFillDisabled"] = p.Border, ["ScrollBarThumbBackgroundColor"] = p.Accent,
+            ["ScrollBarButtonBackground"] = "#00000000", ["ScrollBarButtonBorderBrush"] = "#00000000",
             ["SystemControlForegroundBaseHighBrush"] = p.Text,
             ["SystemControlForegroundBaseMediumBrush"] = p.Muted,
             ["SystemControlHighlightAccentBrush"] = p.Accent
         }) Brush(name, color);
+        resources["ScrollBarSize"] = 7d;
+        resources["ScrollBarTrackBorderThemeThickness"] = 0d;
         resources["SystemAccentColor"] = Color.Parse(p.Accent);
         resources["SystemAccentColorDark1"] = Color.Parse(p.Primary);
         resources["SystemAccentColorLight1"] = Color.Parse(p.Accent);

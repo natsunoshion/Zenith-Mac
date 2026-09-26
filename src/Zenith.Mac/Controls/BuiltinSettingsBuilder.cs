@@ -44,6 +44,7 @@ internal sealed class BuiltinSettingsBuilder
     public event Action? Changed;
     private ListBox? paletteList;
     private CheckBox? paletteRandom;
+    private Button? paletteDelete;
     private PaletteSelection Palette => PaletteService.For(settings, module == "pfa" ? .8f : 1f);
     public void SetTexturedPack(object value)
     {
@@ -312,17 +313,24 @@ internal sealed class BuiltinSettingsBuilder
         var dock = new DockPanel { LastChildFill = true, Width = 184, Margin = new Thickness(0, 10, 10, 10) };
         var reload = new Button { Height = 26, Margin = new Thickness(0, 0, 0, 6) }; Localize(reload, "Content", "{DynamicResource palettes_reload}"); DockPanel.SetDock(reload, Dock.Top); dock.Children.Add(reload); reload.Click += (_, _) => ActionRequested?.Invoke("reload-palettes");
         var folder = new Button { Height = 26, Margin = new Thickness(0, 10, 0, 0), FontSize = 12, Padding = new Thickness(5, 0) }; Localize(folder, "Content", "{DynamicResource palettes_openFolder}"); DockPanel.SetDock(folder, Dock.Bottom); dock.Children.Add(folder); folder.Click += async (_, _) => await OpenFolder(PaletteService.PaletteDirectory);
-        var editRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), Margin = new Thickness(0, 10, 0, 0) };
-        var create = new Button { Content = "New…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(0, 0, 3, 0) };
-        var edit = new Button { Content = "Edit…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(3, 0, 0, 0) };
-        ToolTip.SetTip(create, "New palette"); ToolTip.SetTip(edit, "Edit selected palette");
+        var editRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 3, Margin = new Thickness(0, 10, 0, 0) };
+        var create = new Button { Content = "New", Height = 26, FontSize = 11, Padding = new Thickness(1, 0) };
+        var edit = new Button { Content = "Edit", Height = 26, FontSize = 11, Padding = new Thickness(1, 0) };
+        var delete = paletteDelete = new Button { Content = "Delete", Height = 26, FontSize = 11, Padding = new Thickness(1, 0), IsEnabled = false };
+        ToolTip.SetTip(create, "New"); ToolTip.SetTip(edit, "Edit"); ToolTip.SetTip(delete, "Delete selected custom color set");
         create.Click += (_, _) => ActionRequested?.Invoke("new-palette");
         edit.Click += (_, _) => ActionRequested?.Invoke("edit-palette");
-        editRow.Children.Add(create); Grid.SetColumn(edit, 1); editRow.Children.Add(edit);
+        delete.Click += (_, _) => ActionRequested?.Invoke("delete-palette");
+        editRow.Children.Add(create); Grid.SetColumn(edit, 1); editRow.Children.Add(edit); Grid.SetColumn(delete, 2); editRow.Children.Add(delete);
         DockPanel.SetDock(editRow, Dock.Bottom); dock.Children.Add(editRow);
         var random = paletteRandom = new CheckBox { IsChecked = Palette.Randomized, Margin = new Thickness(0, 5, 0, 0), FontSize = 12 }; Localize(random, "Content", "{DynamicResource palettes_randomise}"); DockPanel.SetDock(random, Dock.Bottom); dock.Children.Add(random); random.IsCheckedChanged += (_, _) => { if (!refreshing) ActionRequested?.Invoke("randomize-palette:" + (random.IsChecked == true)); };
         paletteList = new ListBox { ItemTemplate = new FuncDataTemplate<string>((name, _) => MainWindow.PaletteLabel(root, name!)) }; dock.Children.Add(paletteList);
-        paletteList.SelectionChanged += (_, _) => { if (!refreshing && paletteList.SelectedItem is string selected) { Palette.Select(selected); Set("palette", Palette.SelectedImage); PaletteChanged?.Invoke(Palette.SelectedImage); } };
+        paletteList.SelectionChanged += (_, _) =>
+        {
+            string? selected = paletteList.SelectedItem as string;
+            if (paletteDelete != null) paletteDelete.IsEnabled = selected != null && PaletteDocument.CanDelete(selected);
+            if (!refreshing && selected != null) { Palette.Select(selected); Set("palette", Palette.SelectedImage); PaletteChanged?.Invoke(Palette.SelectedImage); }
+        };
         refreshers.Add(() => SetPalettes(Palette.GetPaletteNames()));
         ReloadPalettes(); return dock;
     }
@@ -342,6 +350,7 @@ internal sealed class BuiltinSettingsBuilder
             var values = names.Distinct().OrderBy(n => n == "Random" ? 0 : 1).ThenBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
             paletteList.ItemsSource = values;
             paletteList.SelectedItem = Palette.SelectedImage;
+            if (paletteDelete != null) paletteDelete.IsEnabled = paletteList.SelectedItem is string selected && PaletteDocument.CanDelete(selected);
             if (paletteRandom != null) paletteRandom.IsChecked = Palette.Randomized;
         }
         finally { refreshing = wasRefreshing; }

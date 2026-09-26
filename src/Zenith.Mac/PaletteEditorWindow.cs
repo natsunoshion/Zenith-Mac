@@ -26,8 +26,8 @@ public sealed class PaletteEditorWindow : Window
     {
         Name = "PaletteColorPicker", IsAlphaEnabled = true, IsAlphaVisible = false,
         IsColorComponentsVisible = false, IsColorPaletteVisible = false, IsColorPreviewVisible = false,
-        IsColorModelVisible = false, IsHexInputVisible = false, Width = 350,
-        HorizontalAlignment = HorizontalAlignment.Left
+        IsColorModelVisible = false, IsHexInputVisible = false, Width = 324,
+        HorizontalAlignment = HorizontalAlignment.Stretch
     };
     readonly NumericUpDown[] components = new NumericUpDown[4];
     readonly TextBox hexBox = new() { Name = "PaletteHex", Watermark = "#RRGGBBAA", Width = 200, HorizontalAlignment = HorizontalAlignment.Left };
@@ -37,6 +37,7 @@ public sealed class PaletteEditorWindow : Window
     readonly Button remove = new() { Content = "Remove row" };
     readonly PaletteSwatch[] swatches = new PaletteSwatch[16];
     readonly Button[] swatchButtons = new Button[16];
+    readonly Border[] swatchRings = new Border[16];
     int row, channel, side;
     bool refreshing, validHex = true;
 
@@ -50,7 +51,7 @@ public sealed class PaletteEditorWindow : Window
     public PaletteEditorWindow(string? existingName = null)
     {
         Title = "Palette Editor — Zenith";
-        Width = 940; Height = 670; MinWidth = 900; MinHeight = 630;
+        Width = 900; Height = 640; MinWidth = 840; MinHeight = 580;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         SystemDecorations = SystemDecorations.Full;
         ThemeManager.Apply(this, "sage");
@@ -64,7 +65,7 @@ public sealed class PaletteEditorWindow : Window
             if (e.NameScope.Find<Border>("ContentBackgroundBorder") is { } contentBackground) contentBackground.Margin = new Thickness(0);
             if (e.NameScope.Find<TabControl>("PART_TabControl") is { } tabs)
             {
-                tabs.Width = 350; tabs.Height = 260;
+                tabs.Width = 324; tabs.Height = 250;
                 tabs.TemplateApplied += (_, tabTemplate) =>
                 {
                     if (tabTemplate.NameScope.Find<ItemsPresenter>("PART_ItemsPresenter") is { } header) header.IsVisible = false;
@@ -104,69 +105,97 @@ public sealed class PaletteEditorWindow : Window
 
     Control BuildContent(bool builtIn)
     {
-        var outer = new Grid { Margin = new Thickness(22, 16, 22, 20), RowDefinitions = new("Auto,Auto,*,Auto,Auto"), RowSpacing = 12 };
+        var outer = new Grid { Margin = new Thickness(18, 14, 18, 16), RowDefinitions = new("Auto,*,Auto,Auto"), RowSpacing = 10 };
         var naming = new Grid { ColumnDefinitions = new("Auto,*,Auto"), ColumnSpacing = 12 };
         naming.Children.Add(new Label { Content = "Palette name" });
         Grid.SetColumn(nameBox, 1); naming.Children.Add(nameBox);
-        var mode = new TextBlock { Text = "Custom colors" }; ThemeManager.BindBrush(mode, TextBlock.ForegroundProperty, "MutedText"); Grid.SetColumn(mode, 2); naming.Children.Add(mode);
+        var mode = new TextBlock { Text = "CUSTOM COLORS", FontSize = 10, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        ThemeManager.BindBrush(mode, TextBlock.ForegroundProperty, "MutedText"); Grid.SetColumn(mode, 2); naming.Children.Add(mode);
         outer.Children.Add(naming);
-        var hint = new TextBlock { Text = (builtIn ? "This built-in palette is saved as a custom copy. " : "")
-            + "Randomise color order remains unchanged. Turn it off in the palette sidebar for fixed track / channel slots.",
-            TextWrapping = TextWrapping.Wrap, FontSize = 12 };
-        ThemeManager.BindBrush(hint, TextBlock.ForegroundProperty, "MutedText");
-        Grid.SetRow(hint, 1); outer.Children.Add(hint);
-        var columns = new Grid { ColumnDefinitions = new("*,350"), ColumnSpacing = 24 };
-        Grid.SetRow(columns, 2); outer.Children.Add(columns);
+        var columns = new Grid { ColumnDefinitions = new("*,360"), ColumnSpacing = 16 };
+        Grid.SetRow(columns, 1); outer.Children.Add(columns);
+
         var palettePanel = new StackPanel { Spacing = 10 };
-        palettePanel.Children.Add(new TextBlock { Text = "16 MIDI channels", FontSize = 20 });
-        palettePanel.Children.Add(new TextBlock { Text = "Each color row contains 16 channels; rows repeat across tracks.", FontSize = 12, TextWrapping = TextWrapping.Wrap });
-        var navigation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        navigation.Children.Add(new Label { Content = "Color row" }); navigation.Children.Add(previous); navigation.Children.Add(rowNumber); navigation.Children.Add(next); navigation.Children.Add(rowCount);
+        var board = new Border { Padding = new Thickness(14), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) };
+        board.Classes.Add("card");
+        var boardContent = new StackPanel { Spacing = 8 };
+        var boardTitle = new TextBlock { Text = "Channel colors", FontSize = 18, FontWeight = FontWeight.SemiBold };
+        boardContent.Children.Add(boardTitle);
+        var subtitle = new TextBlock { Text = "16 MIDI channels · colors repeat for each track", FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        ThemeManager.BindBrush(subtitle, TextBlock.ForegroundProperty, "MutedText"); boardContent.Children.Add(subtitle);
+        var navigation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7, VerticalAlignment = VerticalAlignment.Center };
+        var rowLabel = new TextBlock { Text = "Color row", FontWeight = FontWeight.Medium, Margin = new Thickness(0, 0, 4, 0) };
         previous.Click += (_, _) => { row--; Refresh(); }; next.Click += (_, _) => { row++; Refresh(); };
-        palettePanel.Children.Add(navigation);
-        var colors = new UniformGrid { Rows = 4, Columns = 4 };
+        navigation.Children.Add(rowLabel); navigation.Children.Add(previous); navigation.Children.Add(rowNumber); navigation.Children.Add(next);
+        ThemeManager.BindBrush(rowCount, TextBlock.ForegroundProperty, "MutedText"); navigation.Children.Add(rowCount);
+        boardContent.Children.Add(navigation);
+        var colors = new UniformGrid { Rows = 4, Columns = 4, Width = 360, HorizontalAlignment = HorizontalAlignment.Center };
         for (int i = 0; i < 16; i++)
         {
             int index = i;
-            var content = new StackPanel { Spacing = 5 };
-            content.Children.Add(new TextBlock { Text = (i + 1).ToString(), FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center });
-            swatches[i] = new PaletteSwatch { Height = 30, HorizontalAlignment = HorizontalAlignment.Stretch };
-            content.Children.Add(swatches[i]);
-            swatchButtons[i] = new Button { Name = "Channel" + (i + 1), Content = content, Background = Brushes.Transparent,
-                BorderThickness = new Thickness(2), Padding = new Thickness(5), Margin = new Thickness(0, 0, 6, 6), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            swatches[i] = new PaletteSwatch { Width = 32, Height = 32, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var ring = new Border { Name = "ChannelRing" + (i + 1), Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Padding = new Thickness(3), BorderThickness = new Thickness(1), Child = swatches[i] };
+            ring.Classes.Add("palette-color-ring");
+            swatchRings[i] = ring;
+            var number = new TextBlock { Text = (i + 1).ToString("00"), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
+            ThemeManager.BindBrush(number, TextBlock.ForegroundProperty, "MutedText");
+            var tileContent = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center };
+            tileContent.Children.Add(ring); tileContent.Children.Add(number);
+            swatchButtons[i] = new Button { Name = "Channel" + (i + 1), Content = tileContent,
+                Width = 76, Height = 58, CornerRadius = new CornerRadius(12), Padding = new Thickness(2), Margin = new Thickness(1),
+                Background = Brushes.Transparent, BorderThickness = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center };
             swatchButtons[i].Classes.Add("palette-swatch");
             swatchButtons[i].Click += (_, _) => { channel = index; Refresh(); };
             colors.Children.Add(swatchButtons[i]);
         }
-        palettePanel.Children.Add(colors);
-        palettePanel.Children.Add(gradients);
-        var rowActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        var add = new Button { Content = "Duplicate row" };
+        boardContent.Children.Add(colors);
+        var gradientHint = new TextBlock { Text = "Gradient colors blend from left to right.", FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        ThemeManager.BindBrush(gradientHint, TextBlock.ForegroundProperty, "MutedText");
+        var gradientRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
+        gradientRow.Children.Add(gradients); gradientRow.Children.Add(gradientHint); boardContent.Children.Add(gradientRow);
+        board.Child = boardContent;
+        palettePanel.Children.Add(board);
+
+        var hint = new TextBlock { Text = (builtIn ? "Built-in palettes save as custom copies. " : "")
+            + "Turn off Randomise in the sidebar to assign fixed colors.",
+            TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(2, 0) };
+        ThemeManager.BindBrush(hint, TextBlock.ForegroundProperty, "MutedText"); palettePanel.Children.Add(hint);
+        var rowActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var add = new Button { Content = "Duplicate row", MinWidth = 120 };
         add.Click += (_, _) => { document.AddRow(row); row = document.RowCount - 1; Refresh(); };
         remove.Click += async (_, _) => { if (await Confirm("Remove this color row?", "The other rows will be kept.", "Remove row")) { document.RemoveRow(row); row = Math.Min(row, document.RowCount - 1); Refresh(); } };
         rowActions.Children.Add(add); rowActions.Children.Add(remove); palettePanel.Children.Add(rowActions);
         columns.Children.Add(new ScrollViewer { Content = palettePanel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
 
-        var editor = new StackPanel { Spacing = 10 };
+        var editorCard = new Border { Padding = new Thickness(12), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) };
+        editorCard.Classes.Add("card");
+        var editor = new StackPanel { Spacing = 9 };
+        selectedLabel.FontSize = 16; selectedLabel.FontWeight = FontWeight.SemiBold;
         editor.Children.Add(selectedLabel);
-        var sides = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24 }; sides.Children.Add(left); sides.Children.Add(right); editor.Children.Add(sides);
+        var sides = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 20 }; sides.Children.Add(left); sides.Children.Add(right); editor.Children.Add(sides);
         editor.Children.Add(colorView);
         var rgba = new Grid { ColumnDefinitions = new("*,*,*,*"), ColumnSpacing = 6 };
         for (int i = 0; i < 4; i++)
         {
             var component = components[i] = new NumericUpDown { Name = "RGBA"[i].ToString(), Minimum = 0, Maximum = 255, Increment = 1, FormatString = "0", HorizontalAlignment = HorizontalAlignment.Stretch };
-            var part = new StackPanel { Spacing = 3 }; part.Children.Add(new TextBlock { Text = "RGBA"[i].ToString(), FontSize = 12 }); part.Children.Add(component); Grid.SetColumn(part, i); rgba.Children.Add(part);
+            var part = new StackPanel { Spacing = 4 };
+            var label = new TextBlock { Text = "RGBA"[i].ToString(), FontSize = 11, FontWeight = FontWeight.SemiBold };
+            ThemeManager.BindBrush(label, TextBlock.ForegroundProperty, "MutedText"); part.Children.Add(label); part.Children.Add(component);
+            Grid.SetColumn(part, i); rgba.Children.Add(part);
             component.ValueChanged += (_, _) => { if (!refreshing && components.All(c => c?.Value != null)) ApplyColor(Color.FromArgb((byte)components[3].Value!.Value, (byte)components[0].Value!.Value, (byte)components[1].Value!.Value, (byte)components[2].Value!.Value)); };
         }
         editor.Children.Add(rgba);
-        var hex = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 }; hex.Children.Add(new Label { Content = "Hex" }); hex.Children.Add(hexBox); editor.Children.Add(hex);
-        var hexHint = new TextBlock { Text = "#RRGGBBAA · alpha 0 = transparent, 255 = opaque", FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        var hex = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 8 };
+        hex.Children.Add(new Label { Content = "Hex" }); Grid.SetColumn(hexBox, 1); hex.Children.Add(hexBox); editor.Children.Add(hex);
+        var hexHint = new TextBlock { Text = "#RRGGBBAA · alpha 0 is transparent", FontSize = 11, TextWrapping = TextWrapping.Wrap };
         ThemeManager.BindBrush(hexHint, TextBlock.ForegroundProperty, "MutedText"); editor.Children.Add(hexHint);
-        var colorScroll = new ScrollViewer { Content = editor, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetColumn(colorScroll, 1); columns.Children.Add(colorScroll);
-        Grid.SetRow(error, 3); outer.Children.Add(error);
+        editorCard.Child = new ScrollViewer { Content = editor, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Grid.SetColumn(editorCard, 1); columns.Children.Add(editorCard);
+
+        Grid.SetRow(error, 2); outer.Children.Add(error);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10 };
         var cancel = new Button { Content = "Cancel", MinWidth = 90, IsCancel = true }; cancel.Click += (_, _) => Close((string?)null);
-        actions.Children.Add(cancel); actions.Children.Add(save); Grid.SetRow(actions, 4); outer.Children.Add(actions);
+        actions.Children.Add(cancel); actions.Children.Add(save); Grid.SetRow(actions, 3); outer.Children.Add(actions);
         return outer;
     }
 
@@ -182,7 +211,8 @@ public sealed class PaletteEditorWindow : Window
             for (int i = 0; i < 16; i++)
             {
                 swatches[i].Left = ToColor(document.GetColor(row, i, 0)); swatches[i].Right = ToColor(document.GetColor(row, i, 1)); swatches[i].InvalidateVisual();
-                swatchButtons[i].Classes.Set("selected", i == channel);
+                swatches[i].UseGradient = document.UseGradients;
+                swatchRings[i].Classes.Set("selected", i == channel);
             }
         }
         finally { refreshing = false; }
@@ -256,14 +286,15 @@ public sealed class PaletteEditorWindow : Window
     sealed class PaletteSwatch : Control
     {
         public Color Left, Right;
+        public bool UseGradient;
         public override void Render(DrawingContext context)
         {
-            for (int y = 0; y < Bounds.Height; y += 8)
-            for (int x = 0; x < Bounds.Width; x += 8)
-                context.FillRectangle(((x / 8 + y / 8) % 2 == 0) ? Brushes.DimGray : Brushes.DarkGray,
-                    new Rect(x, y, Math.Min(8, Bounds.Width - x), Math.Min(8, Bounds.Height - y)));
-            var fill = new LinearGradientBrush { StartPoint = new RelativePoint(0, .5, RelativeUnit.Relative), EndPoint = new RelativePoint(1, .5, RelativeUnit.Relative), GradientStops = new() { new(Left, 0), new(Right, 1) } };
-            context.FillRectangle(fill, new Rect(Bounds.Size));
+            double size = Math.Min(Bounds.Width, Bounds.Height);
+            var rect = new Rect((Bounds.Width - size) / 2, (Bounds.Height - size) / 2, size, size);
+            IBrush fill = UseGradient
+                ? new LinearGradientBrush { StartPoint = new RelativePoint(0, .5, RelativeUnit.Relative), EndPoint = new RelativePoint(1, .5, RelativeUnit.Relative), GradientStops = new() { new(Left, 0), new(Right, 1) } }
+                : new SolidColorBrush(Left);
+            context.DrawEllipse(fill, new Pen(new SolidColorBrush(Color.FromArgb(46, 0, 0, 0)), 1), rect);
         }
     }
 }
