@@ -2,6 +2,18 @@ using Zenith.Mac;
 using Zenith.Core.Rendering;
 using ZenithEngine;
 
+if (args.Contains("--shadow"))
+{
+    ShadowChecks.Run(export: args.Contains("--export"));
+    return;
+}
+
+if (args.Contains("--background"))
+{
+    BackgroundChecks.Run();
+    return;
+}
+
 if (args.Contains("--palette-arguments"))
 {
     ScenePaletteArgumentChecks.Run();
@@ -69,6 +81,8 @@ try
 finally { Directory.Delete(pluginDirectory, recursive: true); }
 
 ResourceCleanupChecks.Run();
+BackgroundChecks.Run();
+ShadowChecks.Run();
 PreviewTimingChecks.Run();
 PaletteChecks.Run(args.SkipWhile(a => a != "--palette-midi").Skip(1).FirstOrDefault());
 ScenePaletteArgumentChecks.Run();

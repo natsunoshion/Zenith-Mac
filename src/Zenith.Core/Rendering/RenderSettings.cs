@@ -73,6 +73,8 @@ namespace ZenithEngine
 
         public long lastBGChangeTime = -1;
         public string BGImage = null;
+        public double BGOpacity = 1;
+        public Zenith.Core.Rendering.ForegroundShadowOptions Shadow = Zenith.Core.Rendering.ForegroundShadowOptions.Default;
 
         public event Action PauseToggled;
         public bool Paused

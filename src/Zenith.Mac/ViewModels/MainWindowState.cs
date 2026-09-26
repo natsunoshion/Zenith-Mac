@@ -27,6 +27,7 @@ public sealed class MainWindowState : INotifyPropertyChanged
     }
     public string VersionName { get => Get("2.1.5"); set => Set(value.Replace("Zenith ", "")); }
     public string LanguageCode { get => Get("en"); set => Set(value); }
+    public string ThemeId { get => Get("sage"); set => Set(value is "sage" or "nord-light" or "nord-dark" or "latte" or "mocha" or "solarized-light" ? value : "sage"); }
     public bool MidiLoaded { get => Get(false); set => Set(value); }
     public bool IsBusy { get => Get(false); set => Set(value); }
     public bool IsRendering { get => Get(false); set => Set(value); }
@@ -49,6 +50,12 @@ public sealed class MainWindowState : INotifyPropertyChanged
     public bool IgnoreColorEvents { get => Get(false); set => Set(value); }
     public bool UseBackground { get => Get(false); set => Set(value); }
     public string BackgroundPath { get => Get(""); set => Set(value); }
+    public double BackgroundOpacityPercent { get => Get(100d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 100); }
+    public bool ShadowEnabled { get => Get(false); set => Set(value); }
+    public double ShadowBlurPixels { get => Get(3d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 64) : 3); }
+    public double ShadowAngleDegrees { get => Get(45d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 360) : 45); }
+    public double ShadowDistancePixels { get => Get(18d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 18); }
+    public double ShadowOpacityPercent { get => Get(70d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 70); }
     public double TempoMultiplier { get => Get(1d); set => Set(value); }
     public bool Vsync { get => Get(true); set => Set(value); }
     public bool Paused { get => Get(false); set => Set(value); }
@@ -63,6 +70,7 @@ public sealed class MainWindowState : INotifyPropertyChanged
     public bool UseBitrate { get => Get(true); set => Set(value); }
     public decimal Bitrate { get => Get(20000m); set => Set(value); }
     public bool UseCrf { get => Get(false); set => Set(value); }
+    public bool UseHardwareEncoding { get => Get(false); set => Set(value); }
     public decimal Crf { get => Get(17m); set => Set(value); }
     public string CrfPreset { get => Get("medium"); set => Set(value); }
     public bool UseCustomFfmpeg { get => Get(false); set => Set(value); }

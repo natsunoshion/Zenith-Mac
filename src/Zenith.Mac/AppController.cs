@@ -402,9 +402,14 @@ public sealed class AppController : IDisposable
         settings.timeBasedNotes = State.NoteSizeStyle == 1;
         settings.ignoreColorEvents = State.IgnoreColorEvents;
         settings.BGImage = State.UseBackground ? State.BackgroundPath : "";
+        settings.BGOpacity = State.BackgroundOpacityPercent / 100;
+        settings.Shadow = CurrentShadow;
         settings.Paused = State.Paused;
         settings.tempoMultiplier = State.TempoMultiplier;
     }
+
+    ForegroundShadowOptions CurrentShadow => new(State.ShadowEnabled, State.ShadowBlurPixels,
+        State.ShadowAngleDegrees, State.ShadowDistancePixels, State.ShadowOpacityPercent / 100);
 
     SceneRenderer MakeRenderer() => new(midi!, settings, module == "scripted" ? null : modules[module], module == "scripted" ? pack : null,
         CurrentPalette.SelectedImage, paletteSelection: CurrentPalette)
@@ -527,6 +532,9 @@ public sealed class AppController : IDisposable
                 int renderedVersion = -1;
                 double renderedTime = double.NaN;
                 double previousFrameMultiplier = 1;
+                string appliedBackground = settings.BGImage ?? "";
+                double appliedBackgroundOpacity = settings.BGOpacity;
+                var appliedShadow = settings.Shadow;
                 while (!token.IsCancellationRequested)
                 {
                     double requested = Interlocked.Exchange(ref seek, -1);
@@ -554,24 +562,40 @@ public sealed class AppController : IDisposable
                     int currentVersion = Volatile.Read(ref version);
                     bool finalFrame = false;
                     bool rendered = false;
-                    if (!State.Paused || settings.forceReRender || time != renderedTime || currentVersion != renderedVersion)
+                    bool foregroundChanged = !State.Paused || settings.forceReRender
+                        || time != renderedTime || currentVersion != renderedVersion;
+                    string backgroundPath = State.UseBackground ? State.BackgroundPath : "";
+                    // With no effective image, toggling the checkbox or opacity
+                    // has no visual work to schedule and must not reset playback.
+                    double backgroundOpacity = string.IsNullOrWhiteSpace(backgroundPath) ? 1 : State.BackgroundOpacityPercent / 100;
+                    bool backgroundChanged = backgroundPath != appliedBackground || backgroundOpacity != appliedBackgroundOpacity;
+                    var shadow = CurrentShadow;
+                    bool shadowChanged = shadow != appliedShadow;
+                    if (foregroundChanged || backgroundChanged || shadowChanged)
                     {
                         settings.Paused = State.Paused;
                         settings.ignoreColorEvents = State.IgnoreColorEvents;
                         var data = await worker.Run(r =>
                         {
+                            if (backgroundChanged) r.UpdateBackground(backgroundPath, backgroundOpacity);
+                            if (shadowChanged) r.UpdateShadow(shadow);
                             r.ScreenTime = State.NoteScreenTime;
                             r.FirstKey = (int)State.FirstNote;
                             r.LastKey = (int)State.LastNote + 1;
                             double screenTime = r.NoteScreenTime;
-                            var pixels = r.Render(time);
+                            // A paused background edit needs only the final
+                            // composition pass, retaining script/particle state.
+                            var pixels = foregroundChanged ? r.Render(time) : r.Recompose();
                             if (module == "scripted") scriptedScreenTime = pack!.NoteScreenTime;
-                            return (pixels, r.LastNoteCount, Complete: completion.Observe(time, screenTime,
+                            return (pixels, r.LastNoteCount, Complete: foregroundChanged && completion.Observe(time, screenTime,
                                 r.LastNoteCount, playback.Speed, previousFrameMultiplier));
                         });
                         await Dispatcher.UIThread.InvokeAsync(() => preview?.Present(data.Item1, settings.width / settings.downscale, settings.height / settings.downscale, time, sequence.DurationSeconds, data.LastNoteCount));
                         renderedTime = time;
                         renderedVersion = currentVersion;
+                        appliedBackground = backgroundPath;
+                        appliedBackgroundOpacity = backgroundOpacity;
+                        appliedShadow = shadow;
                         finalFrame = data.Complete;
                         rendered = true;
                     }
@@ -665,7 +689,8 @@ public sealed class AppController : IDisposable
             StartSeconds = exportStart.StartSeconds,
             PlaybackSpeed = 1,
             StopAfterFrame = _ => completion.Complete,
-            BitrateKbps = State.UseBitrate ? (int)State.Bitrate : null,
+            VideoCodec = State.UseHardwareEncoding ? "h264_videotoolbox" : "libx264",
+            BitrateKbps = State.UseBitrate || State.UseHardwareEncoding ? (int)State.Bitrate : null,
             Crf = (int)State.Crf,
             Preset = State.CrfPreset,
             AudioPath = State.IncludeAudio ? State.AudioPath : null,
@@ -772,10 +797,12 @@ public sealed class AppController : IDisposable
 
     void StateChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is not (nameof(MainWindowState.Status) or nameof(MainWindowState.Progress)))
+        if (e.PropertyName is not (nameof(MainWindowState.Status) or nameof(MainWindowState.Progress)
+            or nameof(MainWindowState.UseBackground) or nameof(MainWindowState.BackgroundPath)
+            or nameof(MainWindowState.BackgroundOpacityPercent) or nameof(MainWindowState.ThemeId) or nameof(MainWindowState.ShadowEnabled)
+            or nameof(MainWindowState.ShadowBlurPixels) or nameof(MainWindowState.ShadowAngleDegrees)
+            or nameof(MainWindowState.ShadowDistancePixels) or nameof(MainWindowState.ShadowOpacityPercent)))
             Interlocked.Increment(ref version);
-        if (e.PropertyName is nameof(MainWindowState.UseBackground) or nameof(MainWindowState.BackgroundPath))
-            Queue(RestartPreview);
         if (e.PropertyName == nameof(MainWindowState.AudioEnabled))
             State.AudioToggleLabel = State.AudioEnabled ? "Disable Audio" : "Enable Audio";
         if (e.PropertyName is nameof(MainWindowState.Paused) or nameof(MainWindowState.AudioEnabled)

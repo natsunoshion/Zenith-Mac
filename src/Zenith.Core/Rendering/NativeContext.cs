@@ -86,7 +86,8 @@ public sealed class RenderTarget : IDisposable
     bool disposed;
     public int Width { get; }
     public int Height { get; }
-    public RenderTarget(int width, int height)
+    public RenderTarget(int width, int height) : this(width, height, true) { }
+    public RenderTarget(int width, int height, bool includeDepth)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
@@ -99,9 +100,12 @@ public sealed class RenderTarget : IDisposable
             GL.TexParameter(TextureTarget.Texture2D,TextureParameterName.TextureMagFilter,(int)TextureMagFilter.Linear);
             Framebuffer=GL.GenFramebuffer(); GL.BindFramebuffer(FramebufferTarget.Framebuffer,Framebuffer);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,FramebufferAttachment.ColorAttachment0,TextureTarget.Texture2D,Texture,0);
-            depth=GL.GenRenderbuffer(); GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer,depth);
-            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer,RenderbufferStorage.DepthComponent24,width,height);
-            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer,FramebufferAttachment.DepthAttachment,RenderbufferTarget.Renderbuffer,depth);
+            if (includeDepth)
+            {
+                depth=GL.GenRenderbuffer(); GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer,depth);
+                GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer,RenderbufferStorage.DepthComponent24,width,height);
+                GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer,FramebufferAttachment.DepthAttachment,RenderbufferTarget.Renderbuffer,depth);
+            }
             if(GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer)!=FramebufferErrorCode.FramebufferComplete) throw new InvalidOperationException("Incomplete framebuffer");
         }
         catch (Exception failure)

@@ -14,6 +14,12 @@ Directory.CreateDirectory(temp);
 var assertions = 0;
 try
 {
+    if (args.Contains("--postprocessing"))
+    {
+        PostProcessingChecks.Run(temp, Assert);
+        Console.WriteLine($"PASS {assertions} postprocessing assertions");
+        return;
+    }
     foreach (var folder in Directory.EnumerateDirectories(resources))
     {
         using var pack = ScriptedPack.Load(folder);

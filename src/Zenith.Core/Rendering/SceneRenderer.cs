@@ -106,7 +106,8 @@ public sealed class SceneRenderer : IDisposable
             // The module can apply its own selected palette in ReloadTrackColors.
             // Snapshot after that call so frame updates cannot restore stale colors.
             baseColors = colors.Select(t => t.Select(c => new NoteColor { left = c.left, right = c.right }).ToArray()).ToArray();
-            postProcessor = new(settings.width, settings.height, settings.downscale, settings.BGImage);
+            postProcessor = new(settings.width, settings.height, settings.downscale, settings.BGImage, settings.BGOpacity);
+            postProcessor.SetShadow(settings.Shadow);
         }
         catch (Exception failure)
         {
@@ -116,6 +117,33 @@ public sealed class SceneRenderer : IDisposable
         }
     }
     double Units(double seconds)=>settings.timeBasedNotes?seconds*1000:midi.TempoMap.SecondsToTick(seconds);
+    /// <summary>Hot-update background resources on the render thread without resetting the module or notes.</summary>
+    public bool UpdateBackground(string? path, double opacity)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        context.MakeCurrent();
+        bool changed = postProcessor.SetBackground(path, opacity);
+        settings.BGImage = path;
+        settings.BGOpacity = opacity;
+        return changed;
+    }
+    /// <summary>Present the existing foreground with updated background settings; does not advance script state.</summary>
+    public byte[] Recompose()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (!sessionStarted) throw new InvalidOperationException("Render a foreground frame before recompositing it.");
+        context.MakeCurrent();
+        return postProcessor.Render(target.Texture, settings.ffRender && settings.ffRenderMask);
+    }
+    /// <summary>Change foreground shadow parameters on the GL owner thread without resetting script state.</summary>
+    public bool UpdateShadow(ForegroundShadowOptions options)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        context.MakeCurrent();
+        bool changed = postProcessor.SetShadow(options);
+        settings.Shadow = options;
+        return changed;
+    }
     /// <summary>Apply the picker selection on the render thread, retaining note and particle state.</summary>
     public void ReloadPalette(string name)
     {
