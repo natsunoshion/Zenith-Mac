@@ -12,6 +12,7 @@ public sealed class PaletteSelection
     readonly float saturation;
     readonly float value;
     Dictionary<string, Color4[]> palettes = new(StringComparer.Ordinal);
+    Color4[]? previewColors;
     string selectedImage = "Random";
     bool randomized = true;
     // The original IsChecked=True initializes the WPF toggle and increments seed.
@@ -30,6 +31,16 @@ public sealed class PaletteSelection
     public int Seed { get { lock (gate) return seed; } }
     public long Revision { get { lock (gate) return revision; } }
     public IReadOnlyList<string> GetPaletteNames() { lock (gate) return palettes.Keys.ToArray(); }
+
+    /// <summary>Temporarily overrides the selected palette for live editor preview; null restores the saved palette.</summary>
+    public void SetPreviewColors(Color4[]? colors)
+    {
+        lock (gate)
+        {
+            previewColors = colors == null ? null : (Color4[])colors.Clone();
+            revision++;
+        }
+    }
 
     public void Select(string name)
     {
@@ -57,6 +68,7 @@ public sealed class PaletteSelection
     {
         lock (gate)
         {
+            previewColors = null;
             string folder = PaletteService.PaletteDirectory;
             Directory.CreateDirectory(folder);
             string bundled = AssetPaths.Resolve("Plugins/Assets/Palettes");
@@ -138,7 +150,7 @@ public sealed class PaletteSelection
         ArgumentOutOfRangeException.ThrowIfNegative(tracks);
         lock (gate)
         {
-            var palette = palettes[selectedImage];
+            var palette = previewColors ?? palettes[selectedImage];
             int count = checked(tracks * 16);
             var order = new double[count];
             var coordinates = new int[count];

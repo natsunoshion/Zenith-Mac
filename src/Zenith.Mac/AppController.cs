@@ -24,7 +24,9 @@ public sealed class AppController : IDisposable
     Task? runningTask;
     PreviewWindow? preview;
     PlaybackController? player;
+    readonly object seekSync = new();
     double seek = -1;
+    long seekRevision;
     double resumePosition;
     double scriptedScreenTime;
     int version;
@@ -319,7 +321,11 @@ public sealed class AppController : IDisposable
     async Task EditPalette(bool editExisting)
     {
         var selection = CurrentPalette;
-        var name = await PaletteEditorWindow.ShowEditor(window, editExisting ? selection.SelectedImage : null);
+        var name = await PaletteEditorWindow.ShowEditor(window, editExisting ? selection.SelectedImage : null, colors =>
+        {
+            selection.SetPreviewColors(colors);
+            Interlocked.Increment(ref version);
+        });
         if (name == null) return;
         selection.Reload();
         selection.Select(name);
@@ -453,8 +459,13 @@ public sealed class AppController : IDisposable
         if (!State.IsPreviewing || exporting || running is not { IsCancellationRequested: false }
             || midi == null || !double.IsFinite(position)) return;
         // The UI commits dragging on release. Keep only the latest outstanding
-        // request; the render loop performs the original renderer/audio reset.
-        Interlocked.Exchange(ref seek, Math.Clamp(position, 0, midi.DurationSeconds));
+        // request; a revision also lets us discard a frame that was already
+        // rendering when the seek arrived.
+        lock (seekSync)
+        {
+            seek = Math.Clamp(position, 0, midi.DurationSeconds);
+            seekRevision++;
+        }
     }
 
     async Task ReplayPreview()
@@ -512,7 +523,7 @@ public sealed class AppController : IDisposable
         exporting = false;
         running = new();
         var token = running.Token;
-        Interlocked.Exchange(ref seek, -1);
+        lock (seekSync) { seek = -1; seekRevision++; }
         var sequence = midi;
         preview.ConfigurePlayback(Path.GetFileName(State.MidiPath), sequence.DurationSeconds);
         State.IsPreviewing = true;
@@ -557,7 +568,14 @@ public sealed class AppController : IDisposable
                 var appliedShadow = settings.Shadow;
                 while (!token.IsCancellationRequested)
                 {
-                    double requested = Interlocked.Exchange(ref seek, -1);
+                    double requested;
+                    long frameSeekRevision;
+                    lock (seekSync)
+                    {
+                        requested = seek;
+                        seek = -1;
+                        frameSeekRevision = seekRevision;
+                    }
                     if (requested >= 0)
                     {
                         playback.Pause();
@@ -613,20 +631,35 @@ public sealed class AppController : IDisposable
                             return (pixels, r.LastNoteCount, Complete: foregroundChanged && completion.Observe(time, screenTime,
                                 r.LastNoteCount, playback.Speed, previousFrameMultiplier));
                         });
-                        await Dispatcher.UIThread.InvokeAsync(() => preview?.Present(data.Item1, settings.width / settings.downscale, settings.height / settings.downscale, time, sequence.DurationSeconds, data.LastNoteCount));
-                        renderedTime = time;
-                        renderedVersion = currentVersion;
+                        bool presented = false;
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            // A renderer job may finish after the user has
+                            // committed another seek. Never put that stale frame
+                            // on screen between the requested frame and its replacement.
+                            lock (seekSync)
+                            {
+                                if (frameSeekRevision != seekRevision) return;
+                                preview?.Present(data.Item1, settings.width / settings.downscale, settings.height / settings.downscale, time, sequence.DurationSeconds, data.LastNoteCount);
+                                presented = preview != null;
+                            }
+                        });
+                        if (presented)
+                        {
+                            renderedTime = time;
+                            renderedVersion = currentVersion;
+                            rendered = true;
+                            finalFrame = data.Complete;
+                        }
                         appliedBackground = backgroundPath;
                         appliedBackgroundOpacity = backgroundOpacity;
                         appliedBackgroundX = backgroundX;
                         appliedBackgroundY = backgroundY;
                         appliedShadow = shadow;
-                        finalFrame = data.Complete;
-                        rendered = true;
                     }
                     previousFrameMultiplier = State.RealtimePlayback ? dt * settings.fps : 1;
 
-                    if (State.Vsync)
+                    if (State.Vsync && rendered)
                     {
                         // CGL renders offscreen; Avalonia owns presentation.
                         // Match upstream's independent SwapBuffers/VSync gate
@@ -804,7 +837,7 @@ public sealed class AppController : IDisposable
         runningTask = null;
         running?.Dispose();
         running = null;
-        Interlocked.Exchange(ref seek, -1);
+        lock (seekSync) { seek = -1; seekRevision++; }
         State.IsRendering = false;
         State.IsBusy = false;
         exporting = false;

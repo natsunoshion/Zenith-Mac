@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml.Linq;
+using OpenTK.Mathematics;
 using SkiaSharp;
 using Zenith.Core.Rendering;
 
@@ -93,6 +94,19 @@ public sealed class PaletteDocument
     }
 
     public Rgba GetColor(int row, int channel, int side) => rows[row][channel * 2 + (UseGradients ? side : 0)];
+    public Color4[] ToPaletteColors()
+    {
+        var colors = new Color4[checked(rows.Count * 32)];
+        for (int y = 0; y < rows.Count; y++)
+        for (int channel = 0; channel < 16; channel++)
+        {
+            var left = rows[y][channel * 2];
+            var right = UseGradients ? rows[y][channel * 2 + 1] : left;
+            colors[y * 32 + channel * 2] = new Color4(left.R, left.G, left.B, left.A);
+            colors[y * 32 + channel * 2 + 1] = new Color4(right.R, right.G, right.B, right.A);
+        }
+        return colors;
+    }
     public void SetColor(int row, int channel, int side, Rgba color)
     {
         if ((uint)channel >= 16 || (uint)side > 1) throw new ArgumentOutOfRangeException(nameof(channel));

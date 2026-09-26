@@ -6,7 +6,10 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.VisualTree;
+using OpenTK.Mathematics;
 using Zenith.Core.Rendering;
+using ShapeRectangle = Avalonia.Controls.Shapes.Rectangle;
 
 namespace Zenith.Mac;
 
@@ -14,6 +17,8 @@ namespace Zenith.Mac;
 public sealed class PaletteEditorWindow : Window
 {
     readonly PaletteDocument document;
+    readonly string? editedPaletteName;
+    readonly Action<Color4[]?>? previewPaletteChanged;
     readonly TextBox nameBox = new() { Name = "PaletteName", MinWidth = 260, HorizontalAlignment = HorizontalAlignment.Stretch };
     readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap };
     readonly TextBlock selectedLabel = new() { FontSize = 16 };
@@ -26,7 +31,7 @@ public sealed class PaletteEditorWindow : Window
     {
         Name = "PaletteColorPicker", IsAlphaEnabled = true, IsAlphaVisible = false,
         IsColorComponentsVisible = false, IsColorPaletteVisible = false, IsColorPreviewVisible = false,
-        IsColorModelVisible = false, IsHexInputVisible = false, Width = 324,
+        IsColorModelVisible = false, IsHexInputVisible = false, Width = 312,
         HorizontalAlignment = HorizontalAlignment.Stretch
     };
     readonly NumericUpDown[] components = new NumericUpDown[4];
@@ -41,17 +46,21 @@ public sealed class PaletteEditorWindow : Window
     int row, channel, side;
     bool refreshing, validHex = true;
 
-    public static Task<string?> ShowEditor(Window owner, string? existingName = null)
+    public static Task<string?> ShowEditor(Window owner, string? existingName = null, Action<Color4[]?>? previewChanged = null)
     {
-        var editor = new PaletteEditorWindow(existingName);
+        var editor = new PaletteEditorWindow(existingName, previewChanged);
         ThemeManager.Inherit(editor, owner);
         return editor.ShowDialog<string?>(owner);
     }
 
-    public PaletteEditorWindow(string? existingName = null)
+    public PaletteEditorWindow(string? existingName = null, Action<Color4[]?>? previewChanged = null)
     {
+        previewPaletteChanged = previewChanged;
+        Closed += (_, _) => { if (ResultName == null) previewPaletteChanged?.Invoke(null); };
+        if (existingName != null && !PaletteDocument.IsProtectedName(existingName))
+            editedPaletteName = existingName;
         Title = "Palette Editor — Zenith";
-        Width = 900; Height = 640; MinWidth = 840; MinHeight = 580;
+        Width = 700; Height = 640; MinWidth = 690; MinHeight = 580;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         SystemDecorations = SystemDecorations.Full;
         ThemeManager.Apply(this, "sage");
@@ -72,6 +81,15 @@ public sealed class PaletteEditorWindow : Window
                 };
             }
         };
+        EventHandler? styleSpectrumAfterLayout = null;
+        styleSpectrumAfterLayout = (_, _) =>
+        {
+            if (FindVisual<ColorSpectrum>(colorView, "ColorSpectrum") is not { } spectrum) return;
+            colorView.LayoutUpdated -= styleSpectrumAfterLayout;
+            spectrum.TemplateApplied += (_, _) => StyleSpectrumSurface(spectrum);
+            StyleSpectrumSurface(spectrum);
+        };
+        colorView.LayoutUpdated += styleSpectrumAfterLayout;
 
         if (existingName == null) document = PaletteDocument.Create();
         else if (string.Equals(existingName, PaletteDocument.PfaConfigName, StringComparison.OrdinalIgnoreCase))
@@ -101,22 +119,27 @@ public sealed class PaletteEditorWindow : Window
         };
         save.Click += async (_, _) => await Save();
         Refresh();
+        PublishPreview();
     }
 
     Control BuildContent(bool builtIn)
     {
         var outer = new Grid { Margin = new Thickness(18, 14, 18, 16), RowDefinitions = new("Auto,*,Auto,Auto"), RowSpacing = 10 };
-        var naming = new Grid { ColumnDefinitions = new("Auto,*,Auto"), ColumnSpacing = 12 };
+        var naming = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 12 };
         naming.Children.Add(new Label { Content = "Palette name" });
         Grid.SetColumn(nameBox, 1); naming.Children.Add(nameBox);
-        var mode = new TextBlock { Text = "CUSTOM COLORS", FontSize = 10, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-        ThemeManager.BindBrush(mode, TextBlock.ForegroundProperty, "MutedText"); Grid.SetColumn(mode, 2); naming.Children.Add(mode);
         outer.Children.Add(naming);
-        var columns = new Grid { ColumnDefinitions = new("*,360"), ColumnSpacing = 16 };
+        var columns = new Grid
+        {
+            Width = 654,
+            ColumnDefinitions = new("290,348"),
+            ColumnSpacing = 16,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
         Grid.SetRow(columns, 1); outer.Children.Add(columns);
 
         var palettePanel = new StackPanel { Spacing = 10 };
-        var board = new Border { Padding = new Thickness(14), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) };
+        var board = new Border { Padding = new Thickness(12), CornerRadius = new CornerRadius(14), BorderThickness = new Thickness(1) };
         board.Classes.Add("card");
         var boardContent = new StackPanel { Spacing = 8 };
         var boardTitle = new TextBlock { Text = "Channel colors", FontSize = 18, FontWeight = FontWeight.SemiBold };
@@ -129,12 +152,14 @@ public sealed class PaletteEditorWindow : Window
         navigation.Children.Add(rowLabel); navigation.Children.Add(previous); navigation.Children.Add(rowNumber); navigation.Children.Add(next);
         ThemeManager.BindBrush(rowCount, TextBlock.ForegroundProperty, "MutedText"); navigation.Children.Add(rowCount);
         boardContent.Children.Add(navigation);
-        var colors = new UniformGrid { Rows = 4, Columns = 4, Width = 360, HorizontalAlignment = HorizontalAlignment.Center };
+        // Keep the swatches visually grouped instead of spreading four columns
+        // across a wide, mostly empty area.
+        var colors = new UniformGrid { Rows = 4, Columns = 4, Width = 216, HorizontalAlignment = HorizontalAlignment.Center };
         for (int i = 0; i < 16; i++)
         {
             int index = i;
-            swatches[i] = new PaletteSwatch { Width = 32, Height = 32, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            var ring = new Border { Name = "ChannelRing" + (i + 1), Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Padding = new Thickness(3), BorderThickness = new Thickness(1), Child = swatches[i] };
+            swatches[i] = new PaletteSwatch { Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            var ring = new Border { Name = "ChannelRing" + (i + 1), Width = 34, Height = 34, CornerRadius = new CornerRadius(17), Padding = new Thickness(2), BorderThickness = new Thickness(1), Child = swatches[i] };
             ring.Classes.Add("palette-color-ring");
             swatchRings[i] = ring;
             var number = new TextBlock { Text = (i + 1).ToString("00"), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
@@ -142,17 +167,14 @@ public sealed class PaletteEditorWindow : Window
             var tileContent = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Center };
             tileContent.Children.Add(ring); tileContent.Children.Add(number);
             swatchButtons[i] = new Button { Name = "Channel" + (i + 1), Content = tileContent,
-                Width = 76, Height = 58, CornerRadius = new CornerRadius(12), Padding = new Thickness(2), Margin = new Thickness(1),
+                Width = 54, Height = 54, CornerRadius = new CornerRadius(10), Padding = new Thickness(2), Margin = new Thickness(0),
                 Background = Brushes.Transparent, BorderThickness = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center };
             swatchButtons[i].Classes.Add("palette-swatch");
             swatchButtons[i].Click += (_, _) => { channel = index; Refresh(); };
             colors.Children.Add(swatchButtons[i]);
         }
         boardContent.Children.Add(colors);
-        var gradientHint = new TextBlock { Text = "Gradient colors blend from left to right.", FontSize = 11, TextWrapping = TextWrapping.Wrap };
-        ThemeManager.BindBrush(gradientHint, TextBlock.ForegroundProperty, "MutedText");
-        var gradientRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        gradientRow.Children.Add(gradients); gradientRow.Children.Add(gradientHint); boardContent.Children.Add(gradientRow);
+        boardContent.Children.Add(gradients);
         board.Child = boardContent;
         palettePanel.Children.Add(board);
 
@@ -162,8 +184,8 @@ public sealed class PaletteEditorWindow : Window
         ThemeManager.BindBrush(hint, TextBlock.ForegroundProperty, "MutedText"); palettePanel.Children.Add(hint);
         var rowActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var add = new Button { Content = "Duplicate row", MinWidth = 120 };
-        add.Click += (_, _) => { document.AddRow(row); row = document.RowCount - 1; Refresh(); };
-        remove.Click += async (_, _) => { if (await Confirm("Remove this color row?", "The other rows will be kept.", "Remove row")) { document.RemoveRow(row); row = Math.Min(row, document.RowCount - 1); Refresh(); } };
+        add.Click += (_, _) => { document.AddRow(row); row = document.RowCount - 1; Refresh(); PublishPreview(); };
+        remove.Click += async (_, _) => { if (await Confirm("Remove this color row?", "The other rows will be kept.", "Remove row")) { document.RemoveRow(row); row = Math.Min(row, document.RowCount - 1); Refresh(); PublishPreview(); } };
         rowActions.Children.Add(add); rowActions.Children.Add(remove); palettePanel.Children.Add(rowActions);
         columns.Children.Add(new ScrollViewer { Content = palettePanel, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
 
@@ -237,6 +259,7 @@ public sealed class PaletteEditorWindow : Window
         document.SetColor(row, channel, side, new(color.R, color.G, color.B, color.A));
         swatches[channel].Left = ToColor(document.GetColor(row, channel, 0)); swatches[channel].Right = ToColor(document.GetColor(row, channel, 1)); swatches[channel].InvalidateVisual();
         error.Text = ""; RefreshColor(preserveHex);
+        PublishPreview();
     }
     async Task ChangeGradientMode()
     {
@@ -244,7 +267,7 @@ public sealed class PaletteEditorWindow : Window
         bool enable = gradients.IsChecked == true;
         if (!enable && document.HasDifferentGradientEnds && !await Confirm("Save solid colors instead?", "A solid palette uses each channel's left color when saved. You can switch gradients back on before saving.", "Use left colors"))
         { refreshing = true; gradients.IsChecked = true; refreshing = false; return; }
-        document.UseGradients = enable; Refresh();
+        document.UseGradients = enable; Refresh(); PublishPreview();
     }
     async Task Save()
     {
@@ -253,12 +276,63 @@ public sealed class PaletteEditorWindow : Window
             if (!validHex) return;
             var name = PaletteDocument.ValidateName(nameBox.Text);
             bool exists = PaletteDocument.FindPath(name) != null;
-            if (exists && !await Confirm("Replace existing palette?", $"“{name}” already exists. Replace its colors with this palette?", "Replace")) return;
-            string saved = document.Save(name, overwrite: exists);
-            Close(saved);
+            bool isCurrentPalette = string.Equals(name, editedPaletteName, StringComparison.OrdinalIgnoreCase);
+            if (exists && !isCurrentPalette && !await Confirm("Replace existing palette?", $"“{name}” already exists. Replace its colors with this palette?", "Replace")) return;
+            ResultName = document.Save(name, overwrite: exists);
+            Close(ResultName);
         }
         catch (Exception e) { error.Text = e.Message; }
     }
+
+    string? ResultName { get; set; }
+
+    void PublishPreview() => previewPaletteChanged?.Invoke(document.ToPaletteColors());
+
+    static void StyleSpectrumSurface(ColorSpectrum spectrum)
+    {
+        spectrum.BorderBrush = Brushes.Transparent;
+        spectrum.BorderThickness = new Thickness(0);
+        spectrum.CornerRadius = new CornerRadius(9);
+        ApplyRoundedClip(spectrum, spectrum.Bounds.Size);
+        spectrum.SizeChanged += (_, e) => ApplyRoundedClip(spectrum, e.NewSize);
+        if (FindVisual<Panel>(spectrum, "PART_LayoutRoot") is { } layout)
+        {
+            ApplyRoundedClip(layout, layout.Bounds.Size);
+            layout.SizeChanged += (_, e) => ApplyRoundedClip(layout, e.NewSize);
+        }
+        if (FindVisual<ShapeRectangle>(spectrum, "PART_SpectrumRectangle") is { } surface)
+        {
+            surface.RadiusX = surface.RadiusY = 8;
+            surface.Stroke = Brushes.Transparent;
+            surface.StrokeThickness = 0;
+        }
+        if (FindVisual<ShapeRectangle>(spectrum, "PART_SpectrumOverlayRectangle") is { } overlay)
+        {
+            overlay.RadiusX = overlay.RadiusY = 8;
+            overlay.Stroke = Brushes.Transparent;
+            overlay.StrokeThickness = 0;
+        }
+    }
+
+    static void ApplyRoundedClip(Visual visual, Size size)
+    {
+        if (size.Width <= 0 || size.Height <= 0) return;
+        visual.Clip = new RectangleGeometry
+        {
+            Rect = new Rect(0, 0, size.Width, size.Height),
+            RadiusX = 9,
+            RadiusY = 9
+        };
+    }
+
+    static T? FindVisual<T>(Visual root, string name) where T : Visual
+    {
+        if (root is T match && root is Control control && control.Name == name) return match;
+        foreach (var child in root.GetVisualChildren())
+            if (FindVisual<T>(child, name) is { } found) return found;
+        return null;
+    }
+
     async Task<bool> Confirm(string title, string text, string action)
     {
         var dialog = new Window { Title = title, Width = 430, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner, SystemDecorations = SystemDecorations.Full };

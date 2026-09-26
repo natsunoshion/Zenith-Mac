@@ -15,15 +15,14 @@ RGBA pixels. The 512/1024 images proportionally scale the original PNG onto a
 transparent square canvas; there is no new artwork or recoloring. The visible
 artwork occupies 68.359375% of the height at 256, 512 and 1024 pixels.
 
-`Zenith.png` is the 1024 px Avalonia window icon. `build-app.sh` copies
-`Zenith.icns` into the macOS bundle's Resources with a content-hash filename and
-sets `CFBundleIconFile`. The current 0.1.1 bundle uses
-`Contents/Resources/Zenith-8155fd0117e6.icns`; its Info.plist points to that exact
-filename. Since Avalonia.Native 11.3.9 treats `Window.Icon` as a
-no-op on macOS, `MacApplicationIcon` also explicitly sets this process's
+`Zenith.png` is the 1024 px Avalonia window icon. The `AppIcon.appiconset` asset
+catalog is generated from the same ten ICNS representations and compiled into
+`Assets.car` by `build-app.sh`; the bundle declares `CFBundleIconName=AppIcon`
+and keeps `CFBundleIconFile=AppIcon` as a fallback. Since Avalonia.Native
+11.3.9 treats `Window.Icon` as a no-op on macOS, `MacApplicationIcon` also explicitly sets this process's
 `NSApplication.applicationIconImage` from the embedded original-art ICNS during
 framework initialization and desktop startup. It does not change Dock
-preferences or other applications.
+preferences or other applications, and asks AppKit to redraw its Dock tile.
 
 Apple ImageIO decoding of all ten ICNS representations was checked against
 their embedded PNG pixels. Read-only native checks of the previous running
@@ -35,10 +34,9 @@ colors matched after converting the display profile back to sRGB. Validation
 records are in `artifacts/icon-review/verification.txt` and
 `artifacts/icon-review/dock-diagnostic/verification.md`.
 
-The current application has been rebuilt, signed and launched with this startup
-correction. Dock's displayed icon has **not** been visually confirmed: an earlier
-Dock automation attempt timed out. Native image resolution and setter readback
-are not a screenshot of Dock's actual presentation.
+The app icon must still be checked in the Stage Manager sidebar on the target
+macOS session; bundle registration and native image resolution alone do not
+confirm the sidebar's displayed icon.
 
 Original artwork remains under the upstream license; see `upstream/LICENSE`
 and `THIRD_PARTY_NOTICES.md`.

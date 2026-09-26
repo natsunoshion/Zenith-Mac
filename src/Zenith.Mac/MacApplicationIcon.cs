@@ -53,6 +53,10 @@ internal static class MacApplicationIcon
             { error = "AppKit could not decode the icon resource."; return false; }
             var application = Send(applicationClass, Selector("sharedApplication"));
             SendVoidArg(application, Selector("setApplicationIconImage:"), image);
+            // Explicitly repaint the Dock tile after replacing the process
+            // icon so AppKit doesn't keep showing its previously cached tile.
+            var dockTile = Send(application, Selector("dockTile"));
+            if (dockTile != IntPtr.Zero) SendVoid(dockTile, Selector("display"));
             return true;
         }
         finally

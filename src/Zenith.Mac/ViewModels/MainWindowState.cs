@@ -25,7 +25,8 @@ public sealed class MainWindowState : INotifyPropertyChanged
         if (name == nameof(ProfileName)) PropertyChanged?.Invoke(this, new(nameof(CanSaveProfile)));
         if (name == nameof(SelectedProfile)) PropertyChanged?.Invoke(this, new(nameof(CanDeleteProfile)));
     }
-    public string VersionName { get => Get("2.1.5"); set => Set(value.Replace("Zenith ", "")); }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string VersionName { get => Get("3.0.0"); set => Set(value.Replace("Zenith ", "")); }
     public string LanguageCode { get => Get("en"); set => Set(value); }
     public string ThemeId { get => Get("sage"); set => Set(value is "sage" or "nord-light" or "nord-dark" or "latte" or "mocha" or "solarized-light" ? value : "sage"); }
     public bool MidiLoaded { get => Get(false); set => Set(value); }

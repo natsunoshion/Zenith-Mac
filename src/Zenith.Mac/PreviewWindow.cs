@@ -37,6 +37,7 @@ public sealed class PreviewWindow : Window
         MinWidth = 480; MinHeight = 320;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         SystemDecorations = SystemDecorations.Full;
+        TooltipFocusGuard.Attach(this);
         Background = Brushes.Black;
         Content = BuildContent();
         timeline.SeekCommitted += seconds => { if (active && !closed) SeekRequested?.Invoke(ClampTime(seconds)); };

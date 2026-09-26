@@ -1,101 +1,130 @@
-# Zenith for macOS
+<div align="center">
+  <img src="src/Zenith.Mac/Assets/Zenith.png" alt="Zenith" width="176" />
+  <h1>Zenith for macOS</h1>
+  <p><strong>A modern MIDI renderer rebuilt for Mac</strong></p>
+  <p>基于原版 Zenith 的 MIDI 解析、渲染算法与 Scripted 皮肤格式，面向 macOS 的全新 3.0.0 应用。</p>
 
-基于 [arduano/Zenith-MIDI](https://github.com/arduano/Zenith-MIDI) 的 macOS 源码移植，复用原渲染算法并执行原 Scripted 皮肤。上游通过 Git 子模块固定在 `36f8ba3c06a6b26b9616f31a6d973d0d676e2747`。
+  <h2>Demo</h2>
+  <p><a href="docs/images/demo-render-preview.png"><img src="docs/images/demo-render-preview.png" alt="Zenith 3.0.0 main window and MIDI preview" width="100%" /></a></p>
+  <p><em>Main interface, background opacity controls and the seekable MIDI preview.</em></p>
+  <p><a href="docs/images/demo-palette-editor.png"><img src="docs/images/demo-palette-editor.png" alt="Zenith palette editor with live preview" width="100%" /></a></p>
+  <p><em>Palette editing with the preview updating alongside channel colors.</em></p>
 
-**首次克隆后需要准备资源并构建。** Git 仓库不包含原 Windows 发布包 `Zenith.7z`、解压资源 `assets/windows/Zenith`、构建后的 `dist/Zenith.app`，也不包含 `artifacts/` 中的截图、视频和验证产物。
+  <a href="https://github.com/natsunoshion/Zenith-Mac/releases"><img src="https://img.shields.io/badge/version-3.0.0-blue?style=flat-square" alt="Version 3.0.0" /></a>
+  <a href="https://github.com/natsunoshion/Zenith-Mac/releases"><img src="https://img.shields.io/github/downloads/natsunoshion/Zenith-Mac/total.svg?style=flat-square" alt="Downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-DBAD-blue.svg?style=flat-square" alt="DBAD license" /></a>
+  <a href="https://github.com/natsunoshion/Zenith-Mac/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="Pull requests welcome" /></a>
 
-## 从源码构建
+  <p>
+    <a href="#download">⬇️ Download</a> ·
+    <a href="#features">✨ Features</a> ·
+    <a href="#quick-start">🎹 Quick start</a> ·
+    <a href="#demo">🖼 Demo</a> ·
+    <a href="#macos-rebuild">🍎 macOS rebuild</a> ·
+    <a href="#license">📄 License</a>
+  </p>
+</div>
 
-需要 macOS、.NET 9 SDK，以及资源准备所用的 `7z` 和 Python 3。视频导出另需安装 macOS 版 FFmpeg。
+## Highlights
+
+These are the macOS edition's showcase features, built on top of the original Zenith renderer:
+
+- **Seekable preview:** drag the timeline to jump to any point in playback.
+- **Editable palettes:** customize MIDI channel colors, including left-to-right two-color gradients, and preview edits live.
+- **Background transparency:** adjust the image opacity so the notes stay clear against the artwork.
+- **Automatic drop shadow:** append a configurable shadow pass to rendered notes, with controls for blur, direction, distance and opacity.
+- **Selectable themes:** choose from Sage Light, Nord Snow Storm, Nord Polar Night, Catppuccin Latte, Catppuccin Mocha and Solarized Light.
+
+## Features
+
+- **Live preview:** play through a MIDI while changing render and module settings; preview updates without restarting playback.
+- **Multiple render modules:** Classic, Flat, PFA+, MIDITrail+, Note Counter, Textured and Scripted.
+- **Scripted resource packs:** load `.zrp` skins with textures, particles, profiles and generated settings.
+- **Video export:** render H.264 video with optional audio and transparency mask; choose software encoding or Apple hardware H.264.
+- **Composition controls:** crop-to-fill backgrounds, opacity and position controls, plus a configurable drop-shadow pass automatically applied to rendered notes.
+- **Palette editor:** create and edit channel colors, gradients and alpha values, with live preview.
+- **macOS interface:** four focused pages, six selectable interface themes and a dedicated seekable playback window.
+
+## Render modules
+
+Zenith includes the original renderer families and the Scripted runtime:
+
+- **Classic** — the original Zenith rendering style.
+- **Flat** — a clean, unshaded note style.
+- **PFA+** — a Piano From Above inspired renderer with gradients and transparency.
+- **MIDITrail+** — trails, auras and 3D note boxes.
+- **Note Counter** — configurable MIDI statistics and labels.
+- **Textured** — custom note caps, keyboard artwork and textures.
+- **Scripted** — C# skins with textures, fonts, particles, profiles and dynamic controls.
+
+Scripted skins are loaded from the **Module Settings → Resources** page. The bundled **Synthesia X** pack is selected automatically when Scripted is opened for the first time. Additional compatible packs can be selected from the resource list.
+
+## Download
+
+The macOS release package will be published on the [Releases page](https://github.com/natsunoshion/Zenith-Mac/releases). The app bundle includes the .NET runtime; users do not need to install the .NET SDK.
+
+- **Platform:** Apple Silicon (arm64)
+- **Minimum macOS:** 12.0
+- **Video export:** requires a macOS build of [FFmpeg](https://ffmpeg.org/download.html), which is not bundled.
+
+The current build is for development and testing. A public build should be signed and notarized before general distribution.
+
+## Quick start
+
+1. **🎼 Load a MIDI** — open **General → Load MIDI** and choose a `.mid` file.
+2. **🧩 Choose a renderer** — open **Modules** and select **Scripted** or another module.
+3. **🎨 Pick a skin and palette** — in **Module Settings → Resources**, select **Synthesia X** or another resource pack. Use the palette list to choose colors; **New** and **Edit** open the palette editor.
+4. **▶️ Preview** — click **Start Preview**. The separate player window supports seek, play/pause, restart, mute and fullscreen. Settings can be changed while preview is running.
+5. **🎬 Render** — choose an output path and encoding options on **Render**, then click **Start Render**. Audio and transparency-mask output are optional.
+
+For keyboard shortcuts and playback details, see [Playback controls](docs/PLAYBACK.md). Background and shadow controls are described in [Background effects](docs/BACKGROUND_EFFECTS.md).
+
+## macOS rebuild
+
+This is a source port and continuation of [arduano/Zenith-MIDI](https://github.com/arduano/Zenith-MIDI), rebuilt around Avalonia and macOS system frameworks while retaining the original renderer code and Scripted pack behavior.
+
+- OpenGL rendering uses macOS CGL with OpenGL 4.1.
+- MIDI playback uses Apple's AudioUnit DLS synthesizer.
+- The UI keeps the original workflow—General, Modules, Module Settings and Render—while using a macOS-oriented layout and selectable themes.
+- Backgrounds preserve aspect ratio, fill the output and crop the overflow. Preview changes update without resetting playback.
+- Custom palettes are stored per user at `~/Library/Application Support/Zenith-Mac/Palettes`.
+- The app bundle is self-contained for .NET. FFmpeg remains an external dependency for video encoding.
+
+The source follows the upstream renderer and plugin architecture, but platform APIs differ. See [parity notes](docs/PARITY.md) for tested behavior and known differences.
+
+## Build from source
+
+Requirements: macOS, .NET 9 SDK, `7z` and Python 3. Video export checks also require macOS FFmpeg.
 
 ```sh
 git clone --recurse-submodules https://github.com/natsunoshion/Zenith-Mac.git
 cd Zenith-Mac
 ```
 
-如果已经普通克隆，先执行 `git submodule update --init --recursive`。将原 Windows 发布包 `Zenith.7z` 放到仓库根目录，然后执行：
+Place the original `Zenith.7z` resource archive in the repository root, then prepare assets and run the app:
 
 ```sh
-./tools/prepare-assets.sh          # 解压资源并准备模块预览图
+./tools/prepare-assets.sh
 dotnet build Zenith.Mac.sln
 dotnet run --project src/Zenith.Mac
 ```
 
-资源准备完成后，也可用 `run.command` 启动开发版本。生成可双击打开的应用包：
+To create the Apple Silicon application bundle:
 
 ```sh
-./tools/build-app.sh               # Apple Silicon：dist/Zenith.app
-./tools/build-app.sh osx-x64        # Intel 目标，尚未验证；覆盖同一个输出目录
+./tools/build-app.sh
 ```
 
-生成的 `.app` 包含 .NET 运行时，运行时无需另外安装 SDK。更新源码后需要重新打包。FFmpeg 不随应用包打包；程序会查找应用可执行目录、`/opt/homebrew/bin/ffmpeg`、`/usr/local/bin/ffmpeg` 和 PATH。原发布包中的 `ffmpeg.exe` 不能用于 macOS 导出。
+The app is written to `dist/Zenith.app`. An Intel target is available as `./tools/build-app.sh osx-x64`, but has not been validated on Intel hardware.
 
-## 打开应用
+## Resource pack compatibility
 
-完成上述打包后，双击生成的 `dist/Zenith.app`。
+Zenith for macOS is intended to support the same resource packs as the original Zenith. Compatibility across the full pack catalog has not yet been verified. Packs that rely on Windows-only binaries or APIs may need a macOS-compatible build.
 
-1. **General → Load MIDI** 选择 `.mid` 文件。
-2. **Modules → Scripted** 选择脚本模块。
-3. **Module Settings → Resources** 选择 **Synthesia X.zrp**；**Settings** 页显示脚本自身生成的设置和原配置列表。
-4. **Start Preview** 打开预览；底部独立播放器栏支持拖动进度、播放/暂停、重播、静音和全屏。主窗口底部的 **Show preview** 可找回预览窗口；可继续实时修改模块设置。快捷键见 [播放控制](docs/PLAYBACK.md)。
-5. **Render** 设置文件名、音频、遮罩和编码参数，点击 **Start Render**。
+## License
 
-## 实现范围
+The original Zenith source is distributed under the [Don't Be a Dick Public License](upstream/LICENSE). Original authorship and third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The upstream project is maintained at [arduano/Zenith-MIDI](https://github.com/arduano/Zenith-MIDI).
 
-- 复用原 Classic / Flat / PFA / MIDITrail / Textured / Note Counter 渲染算法和着色器；在 macOS 原生 CGL OpenGL 4.1 上运行。
-- 保留 General / Modules / Module Settings / Render 四页结构和多语言字典，采用圆角控件和分区布局。General 的 **Theme** 可切换六套浅色／深色主题并保存选择，默认浅石灰＋鼠尾草绿；主题仅改变界面，保留 MIDI、皮肤和导出画面的颜色。内置模块设置由原 XAML 定义转换，脚本设置仍由皮肤生成。方案与来源见 [界面主题](docs/THEMES.md)。
-- 背景图片保持比例铺满画面，超出部分裁剪；水平／垂直位置滑块和一键居中控制取景，支持 0–100% 不透明度。预览中调整背景会直接更新合成，保留播放位置、暂停状态和粒子状态。50% 可在黑底上减淡背景；导出使用开始时的背景设置。
-- General 提供 **Drop shadow**：调整黑色投影的模糊度、方向、距离和不透明度，预览可实时修改，导出遮罩包含柔和阴影。它基于整个皮肤前景的透明轮廓；关闭皮肤自带的不透明背景即可显露音符投影。使用方法见 [背景与阴影](docs/BACKGROUND_EFFECTS.md)。
-- 原 `.zrp` AES/ZIP 解码、C# 运行时编译、纹理、文字、四顶点颜色/UV、三种纹理着色器、两种混合模式、粒子、可变 Note 元数据、生命周期和动态 UI。
-- Scripted 透明合成已修正火花柔光在背景上产生灰圈的问题，重叠柔光、SSAA 和阴影使用一致的透明覆盖率；这部分透明边缘及遮罩输出有意区别于原版的 alpha 补偿结果。
-- 已验证的原 `Synthesia X.zrp` 加载 88 张纹理、2 种字体、306 项设置、11 份原配置。也支持原 Example Flat / Textured / Particles；这些资源需从原发布包准备。
-- 调色板选择、随机开关和种子按模块独立保存于运行状态，支持预览热更新；配置与默认值恢复会同步选色和 MIDITrail Aura。调色板位于 `~/Library/Application Support/Zenith-Mac/Palettes`，内置 PNG 仅补充缺失文件，不向应用包写入。内置 Scripted 配置首次合并到同级 `ScriptedProfiles` 用户目录；外部皮肤仍使用相邻 `.profiles.json`。
-- Scripted 右栏及内置模块提供 **New Palette / Edit Palette**：可编辑 16 通道、多行颜色、左右渐变、RGBA 和 Hex，保存后自动选中并热更新，保留原 Random 行为。说明与验证见 [调色板编辑器](docs/PALETTE_EDITOR.md)。
-- MIDI format 0/1、running status、tempo map、SMPTE、重叠音符、跨轨道延音/选择性延音踏板、颜色事件、按时序定位与控制器状态恢复，以及 Apple AudioUnit 实时音源。
-- FFmpeg 离线定帧导出、SSAA、背景图、软件 H.264 CRF/码率、Apple 硬件 H.264 码率、自定义参数、外部音频合并、独立 alpha 遮罩、进度与取消。硬件编码是独立选项，不将软件 CRF 值换算成硬件质量参数。
-- macOS 插件发现机制：将面向 `Zenith.Core` 编译、实现 `ZenithEngine.IPluginRender` 的程序集放到资源目录的 `Plugins/Mac`。
+---
 
-导出会将编码写入与下一帧渲染重叠，脚本仍按帧顺序执行。Apple 硬件模式需要当前 FFmpeg 与 Mac 支持 VideoToolbox；无法使用时会显示错误，可手动选择软件模式。实测数据、复现方法与进一步优化方向见 [渲染性能](docs/PERFORMANCE.md)。
-
-## 与“完全一样”的验收边界
-
-这是实际执行原脚本和原渲染算法的源码移植。**目前不能宣称已经通过 Windows/macOS 整体逐像素、所有行为的 1:1 验收。**
-
-- WPF 与 Avalonia、Windows GDI 与 macOS Skia 的字体栅格化和部分控件度量有差异。
-- 主设置页与预览播放器采用统一的新样式，并保留 macOS 原生窗口外框；界面外观按用户要求独立设计。应用图标来自原仓库绿色双箭头。已有默认与最小尺寸的布局、文字居中及部分交互检查，仍未覆盖所有系统缩放和交互状态。
-- 原 Windows WPF 插件 DLL 无法直接在 macOS 加载；它们需要源代码移植并重新编译。已测试的 Synthesia X 和三个 Example 皮肤按原脚本加载，在编译时映射 OpenTK 3 数学命名空间至 OpenTK 4；这不表示任意第三方脚本及依赖均兼容。
-- MIDI 播放使用 Apple DLS 音源，Windows KDMAPI/系统音源的音色取决于原系统配置；使用相同外部音频进行视频合成可保留该音频。
-- 已参照 Windows 原版 Zenith 2.1.5 检查页面和预览。尚未完成相同 MIDI、相同配置和相同时间的逐帧对照，亦未验证所有第三方插件或极端规模黑 MIDI。
-- 当前验证环境为 Apple Silicon M3 Pro / macOS 15.7.4。打包脚本接受 `osx-x64` 参数，但尚无 Intel 构建及实机运行验证结果。
-
-具体证据、测试覆盖范围和待完成项见 [一致性验收记录](docs/PARITY.md)。
-
-## 测试与命令行
-
-完成资源准备后，在 macOS 上运行以下检查。带 `--ffmpeg` 或 `--export` 的检查需要 FFmpeg：
-
-```sh
-dotnet run --project tests/Zenith.Core.SelfTest -- --ffmpeg --audio --stress
-# 本机支持 VideoToolbox 时，另加 --videotoolbox 检查硬件编码
-dotnet run --project tests/Zenith.Scripted.Tests
-dotnet run --project tests/Zenith.App.Tests
-dotnet run --project tests/Zenith.App.Tests -- --export  # 增加实际 Flat 尾帧/遮罩编码检查
-dotnet run --project tests/Zenith.App.Tests -- --background
-dotnet run --project tests/Zenith.App.Tests -- --shadow --export
-dotnet run --project tests/Zenith.Preview.Tests -v:quiet # macOS 原生预览交互与生命周期
-dotnet run --project src/Zenith.Cli -- gpu-test tests/fixtures/demo.mid artifacts/gpu
-```
-
-测试和 CLI 会在本地生成检查产物。文档中引用的 `artifacts/` 路径是开发验证记录，历史截图、音频和视频不随 Git 提供。
-
-已有真实 Synthesia X → CGL → FFmpeg 导出验证，覆盖短视频、外部音频和遮罩。另以一份 1,991 音符、289.056 秒的 MIDI 验证默认皮肤：4 秒片段输出 640×360、30 fps、120 帧无音频视频并完整解码通过；该结果不构成 Windows 同配置、同帧对照。
-
-MIDI/音频/导出自检在启用 `--ffmpeg --audio --stress --videotoolbox` 时共 44 项通过，包含 100 万音符的合成文件解析、1,000 次区间查询、动态尾帧、流水线帧顺序/像素一致性及实际硬件编码。该压力样例为短音符序列，不代表已经验证百万音符同时可见的渲染负载。另有 34 项预览/导出时序检查及实际 Flat 渲染的 349 帧视频/遮罩验证。自检与完整导出命令见 [核心测试说明](tests/Zenith.Core.SelfTest/README.md)。
-
-命令行支持 `inspect`、`frame`、`gpu-test` 和 `render`。运行不带参数的 CLI 查看完整语法：
-
-```sh
-dotnet run --project src/Zenith.Cli --
-```
-
-源码目录：`src/Zenith.Core` 为解析/脚本/渲染/导出，`src/Zenith.Mac` 为窗口与控制器，`src/Zenith.Cli` 为自动渲染与诊断入口。`upstream` 为只读参考子模块；`tools/port_originals.py` 可生成初始机械转换结果，正式源码另包含平台适配修复。请勿提交个人 MIDI、音频、配置或生成的视频。原作者与依赖版权见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，许可证见 [LICENSE](LICENSE)。
+**3.0.0 macOS rebuild** · See the [documentation](docs/) for feature guides, technical notes and validation details.

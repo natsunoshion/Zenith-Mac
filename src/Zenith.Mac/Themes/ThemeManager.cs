@@ -62,6 +62,7 @@ public static class ThemeManager
 
     public static void Apply(Window window, string? themeId)
     {
+        TooltipFocusGuard.Attach(window);
         string id = themeId != null && Palettes.ContainsKey(themeId) ? themeId : "sage";
         var p = Palettes[id];
         var resources = window.Resources;
