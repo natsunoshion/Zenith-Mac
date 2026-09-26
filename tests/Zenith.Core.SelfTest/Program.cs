@@ -197,6 +197,91 @@ if (args.Contains("--ffmpeg"))
     catch (OperationCanceledException) { cancelled = true; }
     Check(cancelled && !File.Exists(cancelledPath) && !Directory.EnumerateFiles(fixtureDirectory, ".cancelled-export.zenith-*").Any(),
         "cancelled export removes its partial output");
+
+    async Task<string> DecodedFrames(string path)
+    {
+        using var decoder = Process.Start(new ProcessStartInfo("ffmpeg")
+        {
+            RedirectStandardOutput = true, RedirectStandardError = true,
+            ArgumentList = { "-v", "error", "-i", path, "-map", "0:v:0", "-f", "framemd5", "pipe:1" }
+        })!;
+        var stdout = decoder.StandardOutput.ReadToEndAsync();
+        var stderr = decoder.StandardError.ReadToEndAsync();
+        await decoder.WaitForExitAsync();
+        if (decoder.ExitCode != 0) throw new Exception(await stderr);
+        return string.Join('\n', (await stdout).Split('\n').Where(line => line.Length != 0 && line[0] != '#'));
+    }
+    string? referenceVideo = null, referenceMask = null;
+    foreach (bool pipeline in new[] { false, true })
+    {
+        string pipelinePath = Path.Combine(fixtureDirectory, $"pipeline-{pipeline}.mp4");
+        string pipelineMask = Path.Combine(fixtureDirectory, $"pipeline-{pipeline}-mask.mp4");
+        long lastRendered = -1; int callbacks = 0, completionChecks = 0;
+        var pipelineResult = await FfmpegExporter.ExportAsync(new()
+        {
+            OutputPath = pipelinePath, MaskOutputPath = pipelineMask, Width = 64, Height = 64,
+            FramesPerSecond = 24, DurationSeconds = .1, Crf = 0, Preset = "ultrafast", PipelineEncoding = pipeline,
+            StopAfterFrame = info =>
+            {
+                if (lastRendered != info.Index) throw new Exception("Completion observed a later renderer frame");
+                completionChecks++; return info.Index == 16;
+            }
+        }, (info, _) =>
+        {
+            callbacks++; lastRendered = info.Index;
+            for (int i = 0; i < frame.Length; i += 4)
+            { frame[i] = (byte)(info.Index * 13); frame[i + 1] = (byte)(i / 4 % 64 * 4); frame[i + 2] = 170; frame[i + 3] = (byte)(info.Index * 11 + i / 4); }
+            return ValueTask.FromResult<ReadOnlyMemory<byte>>(frame); // Deliberately reuse and mutate the same array.
+        });
+        Check(pipelineResult.FrameCount == 17 && callbacks == 17 && completionChecks == 17,
+            $"pipeline={pipeline}: stateful completion runs before the next render and preserves dynamic tail");
+        string videoHashes = await DecodedFrames(pipelinePath), maskHashes = await DecodedFrames(pipelineMask);
+        if (!pipeline) { referenceVideo = videoHashes; referenceMask = maskHashes; }
+        else Check(videoHashes == referenceVideo && maskHashes == referenceMask,
+            "pipelined reused buffers retain exact decoded video/mask pixels and frame order");
+    }
+    using var pipelineCancel = new CancellationTokenSource();
+    string cancelledMask = Path.Combine(fixtureDirectory, "cancelled-pipeline-mask.mp4");
+    string cancelledVideo = Path.Combine(fixtureDirectory, "cancelled-pipeline.mp4");
+    byte[] largeFrame = new byte[512 * 512 * 4];
+    cancelled = false;
+    try
+    {
+        await FfmpegExporter.ExportAsync(new()
+        {
+            OutputPath = cancelledVideo, MaskOutputPath = cancelledMask, Width = 512, Height = 512,
+            FramesPerSecond = 60, DurationSeconds = 10, PipelineEncoding = true
+        }, (info, _) =>
+        {
+            if (info.Index == 1) pipelineCancel.Cancel();
+            return ValueTask.FromResult<ReadOnlyMemory<byte>>(largeFrame);
+        }, cancellationToken: pipelineCancel.Token).WaitAsync(TimeSpan.FromSeconds(10));
+    }
+    catch (OperationCanceledException) { cancelled = true; }
+    Check(cancelled && !File.Exists(cancelledVideo) && !File.Exists(cancelledMask)
+        && !Directory.EnumerateFiles(fixtureDirectory, ".cancelled-pipeline*.zenith-*").Any(),
+        "pipelined cancellation settles both pipes and removes video/mask partial outputs");
+    bool explicitBitrate = false;
+    try
+    {
+        await FfmpegExporter.ExportAsync(new() { OutputPath = destination, Width = 64, Height = 64,
+            DurationSeconds = 1, VideoCodec = "h264_videotoolbox" }, (_, _) => ValueTask.FromResult<ReadOnlyMemory<byte>>(frame));
+    }
+    catch (ArgumentException e) { explicitBitrate = e.Message.Contains("explicit bitrate"); }
+    Check(explicitBitrate, "hardware H.264 requires explicit bitrate instead of silently reinterpreting CRF");
+    if (args.Contains("--videotoolbox"))
+    {
+        string hardwarePath = Path.Combine(fixtureDirectory, "hardware-test.mp4");
+        string hardwareMask = Path.Combine(fixtureDirectory, "hardware-mask-test.mp4");
+        var hardware = await FfmpegExporter.ExportAsync(new()
+        {
+            OutputPath = hardwarePath, MaskOutputPath = hardwareMask, Width = 64, Height = 64,
+            FramesPerSecond = 24, DurationSeconds = .5, VideoCodec = "h264_videotoolbox", BitrateKbps = 2_000, PipelineEncoding = true
+        }, (_, _) => ValueTask.FromResult<ReadOnlyMemory<byte>>(frame));
+        Check(hardware.FrameCount == 12 && (await DecodedFrames(hardwarePath)).Split('\n').Length == 12
+            && (await DecodedFrames(hardwareMask)).Split('\n').Length == 12,
+            "required VideoToolbox hardware encodes and decodes 12 video/mask frames");
+    }
 }
 Console.WriteLine($"All {passed} tests passed. Fixture: {Path.Combine(fixtureDirectory, "demo.mid")}");
 

@@ -36,6 +36,7 @@ Render options:
   --start 0 --duration <seconds> --speed 1 --screen-time 300
   --audio <audio.wav> --audio-offset <seconds> --audio-trim <seconds>
   --mask <mask.mp4> --crf 17 --preset medium --bitrate <kbps>
+  --codec libx264|h264_videotoolbox  (hardware requires --bitrate)
   --ffmpeg <executable> --custom '<ffmpeg output options>' --time-based
 The default duration runs from --start to the MIDI end at --speed.
 """);
@@ -54,12 +55,15 @@ static async Task RenderVideo(string[] arguments)
         if(!key.StartsWith("--")||i+1>=arguments.Length)throw new ArgumentException($"Missing value for option {key}.");
         options.Add(key,arguments[++i]);
     }
-    string[] valid=["--width","--height","--fps","--ssaa","--start","--duration","--speed","--screen-time","--audio","--audio-offset","--audio-trim","--mask","--crf","--preset","--bitrate","--ffmpeg","--custom","--time-based"];
+    string[] valid=["--width","--height","--fps","--ssaa","--start","--duration","--speed","--screen-time","--audio","--audio-offset","--audio-trim","--mask","--crf","--preset","--bitrate","--codec","--ffmpeg","--custom","--time-based"];
     foreach(string key in options.Keys)if(!valid.Contains(key))throw new ArgumentException($"Unknown render option {key}.");
     string? Get(string key)=>options.GetValueOrDefault(key);
     double Number(string key,double fallback)=>Get(key)is{} value?double.Parse(value,System.Globalization.CultureInfo.InvariantCulture):fallback;
     int Integer(string key,int fallback)=>Get(key)is{} value?int.Parse(value,System.Globalization.CultureInfo.InvariantCulture):fallback;
     var midi=MidiSequence.Load(arguments[1]);
+    string codec=Get("--codec")??"libx264";
+    if(codec is not ("libx264" or "h264_videotoolbox"))throw new ArgumentException("--codec must be libx264 or h264_videotoolbox.");
+    if(codec=="h264_videotoolbox"&&Get("--bitrate")==null)throw new ArgumentException("--codec h264_videotoolbox requires an explicit --bitrate in kbps; it does not use CRF.");
     int width=Integer("--width",1920),height=Integer("--height",1080),ssaa=Integer("--ssaa",1);
     double fps=Number("--fps",60),start=Number("--start",0),speed=Number("--speed",1);
     if(ssaa is <1 or >8)throw new ArgumentException("--ssaa must be from 1 to 8.");
@@ -89,7 +93,7 @@ static async Task RenderVideo(string[] arguments)
                 OutputPath=arguments[2],MaskOutputPath=Get("--mask"),Width=width,Height=height,FramesPerSecond=fps,
                 DurationSeconds=Number("--duration",(midi.DurationSeconds-start)/speed),StartSeconds=start,PlaybackSpeed=speed,
                 AudioPath=Get("--audio"),AudioOffsetSeconds=Number("--audio-offset",Math.Max(0,-start/speed)),AudioTrimSeconds=Number("--audio-trim",Math.Max(0,start)),
-                Crf=Integer("--crf",17),Preset=Get("--preset")??"medium",BitrateKbps=Get("--bitrate")is null?null:Integer("--bitrate",20000),
+                Crf=Integer("--crf",17),Preset=Get("--preset")??"medium",BitrateKbps=Get("--bitrate")is null?null:Integer("--bitrate",20000),VideoCodec=codec,
                 FfmpegPath=Get("--ffmpeg")??"ffmpeg",AdditionalArguments=FfmpegExporter.ParseArguments(Get("--custom")??"")
             };
             var result=await FfmpegExporter.ExportAsync(exportOptions,(frame,token)=>

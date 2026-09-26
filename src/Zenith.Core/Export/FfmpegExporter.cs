@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 
@@ -14,12 +15,14 @@ public sealed class VideoExportOptions
     public double DurationSeconds { get; init; }
     public double StartSeconds { get; init; }
     public double PlaybackSpeed { get; init; } = 1;
-    /// <summary>Optional renderer completion condition evaluated after writing each frame. DurationSeconds becomes a progress estimate.</summary>
+    /// <summary>Optional completion condition evaluated after rendering each frame, before rendering the next. DurationSeconds becomes a progress estimate.</summary>
     public Func<ExportFrame, bool>? StopAfterFrame { get; init; }
     public int? BitrateKbps { get; init; }
     public int Crf { get; init; } = 17;
     public string Preset { get; init; } = "medium";
     public string VideoCodec { get; init; } = "libx264";
+    /// <summary>Overlap one encoder write with the following render. A private frame copy supports callbacks that reuse their buffer.</summary>
+    public bool PipelineEncoding { get; init; } = true;
     public bool FlipVertically { get; init; }
     public string? AudioPath { get; init; }
     public double AudioOffsetSeconds { get; init; }
@@ -90,10 +93,23 @@ public static class FfmpegExporter
         long completedFrames = 0;
         int frameBytes = checked(options.Width * options.Height * 4);
         byte[]? maskBytes = mask == null ? null : new byte[frameBytes];
+        byte[]? encodingBytes = options.PipelineEncoding ? ArrayPool<byte>.Shared.Rent(frameBytes) : null;
+        Task? pendingWrite = null;
         try
         {
             videoEncoder = Encoder.Start(options, stagedOutput, withAudio: true);
             if (mask != null) maskEncoder = Encoder.Start(options, stagedMask, withAudio: false);
+            async Task WriteFrame(ReadOnlyMemory<byte> pixels)
+            {
+                if (maskEncoder == null)
+                    await videoEncoder.WriteAsync(pixels, cancellationToken).ConfigureAwait(false);
+                else
+                {
+                    CreateAlphaMask(pixels.Span, maskBytes!);
+                    await Task.WhenAll(videoEncoder.WriteAsync(pixels, cancellationToken),
+                        maskEncoder.WriteAsync(maskBytes!, cancellationToken)).ConfigureAwait(false);
+                }
+            }
             double lastReport = -1;
             for (long i = 0; options.StopAfterFrame != null || i < frameCount; i++)
             {
@@ -104,14 +120,20 @@ public static class FfmpegExporter
                 var pixels = await renderFrame(frame, cancellationToken).ConfigureAwait(false);
                 if (pixels.Length != frameBytes)
                     throw new InvalidDataException($"Frame {i} has {pixels.Length} bytes; expected {frameBytes} BGRA bytes.");
-                await videoEncoder.WriteAsync(pixels, cancellationToken).ConfigureAwait(false);
-                if (maskEncoder != null)
+                // Completion may observe state mutated by the callback. Capture
+                // it before advancing the stateful renderer to another frame.
+                bool complete = options.StopAfterFrame?.Invoke(frame) ?? i + 1 == frameCount;
+                if (encodingBytes == null)
+                    await WriteFrame(pixels).ConfigureAwait(false);
+                else
                 {
-                    CreateAlphaMask(pixels.Span, maskBytes!);
-                    await maskEncoder.WriteAsync(maskBytes!, cancellationToken).ConfigureAwait(false);
+                    if (pendingWrite != null) await pendingWrite.ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    pixels.CopyTo(encodingBytes);
+                    pendingWrite = WriteFrame(encodingBytes.AsMemory(0, frameBytes));
+                    if (complete) await pendingWrite.ConfigureAwait(false);
                 }
                 completedFrames = i + 1;
-                bool complete = options.StopAfterFrame?.Invoke(frame) ?? completedFrames == frameCount;
                 if (watch.Elapsed.TotalSeconds - lastReport >= .1 || complete)
                 {
                     double fraction = complete ? 1 : Math.Min(.99, (double)completedFrames / frameCount);
@@ -132,6 +154,11 @@ public static class FfmpegExporter
         finally
         {
             videoEncoder?.Dispose(); maskEncoder?.Dispose();
+            // A cancelled/failed pipe must release its memory before it returns
+            // to the shared pool. Dispose above also closes a faulted encoder.
+            if (pendingWrite != null)
+                try { await pendingWrite.ConfigureAwait(false); } catch { }
+            if (encodingBytes != null) ArrayPool<byte>.Shared.Return(encodingBytes);
             TryDelete(stagedOutput);
             if (mask != null) TryDelete(stagedMask);
         }
@@ -152,6 +179,8 @@ public static class FfmpegExporter
         if (!double.IsFinite(options.StartSeconds) || !double.IsFinite(options.PlaybackSpeed) || options.PlaybackSpeed <= 0)
             throw new ArgumentException("Invalid timeline settings.");
         if (options.Crf is < 0 or > 51 || options.BitrateKbps is <= 0) throw new ArgumentException("Invalid encoding quality.");
+        if (options.VideoCodec == "h264_videotoolbox" && options.BitrateKbps == null)
+            throw new ArgumentException("Apple H.264 hardware encoding requires an explicit bitrate; CRF applies to software encoding.");
         if (!double.IsFinite(options.AudioOffsetSeconds) || !double.IsFinite(options.AudioTrimSeconds) || options.AudioTrimSeconds < 0)
             throw new ArgumentException("Invalid audio timing.");
         if (!string.IsNullOrWhiteSpace(options.AudioPath))
@@ -181,11 +210,13 @@ public static class FfmpegExporter
         readonly Process process;
         readonly Task readErrors;
         readonly StringBuilder errorLog = new();
+        readonly bool hardwareH264;
         bool complete;
 
-        Encoder(Process process)
+        Encoder(Process process, bool hardwareH264)
         {
             this.process = process;
+            this.hardwareH264 = hardwareH264;
             readErrors = Task.Run(async () =>
             {
                 while (await process.StandardError.ReadLineAsync().ConfigureAwait(false) is { } line)
@@ -217,6 +248,8 @@ public static class FfmpegExporter
             if (audio) Add("-map", "1:a:0", "-c:a", "aac"); else Add("-an");
             if (options.FlipVertically) Add("-vf", "vflip");
             Add("-c:v", options.VideoCodec, "-pix_fmt", "yuv420p");
+            // An explicitly requested hardware mode must not silently fall back.
+            if (options.VideoCodec == "h264_videotoolbox") Add("-allow_sw", "0");
             if (options.BitrateKbps is { } bitrate) Add("-b:v", $"{bitrate}k", "-maxrate", $"{bitrate}k", "-bufsize", $"{bitrate * 2L}k");
             else if (options.VideoCodec is "libx264" or "libx265") Add("-crf", options.Crf.ToString(CultureInfo.InvariantCulture), "-preset", options.Preset);
             if (audio && options.PlaybackSpeed != 1)
@@ -236,7 +269,7 @@ public static class FfmpegExporter
             try
             {
                 var process = Process.Start(start) ?? throw new InvalidOperationException("ffmpeg did not start.");
-                return new(process);
+                return new(process, options.VideoCodec == "h264_videotoolbox");
             }
             catch (System.ComponentModel.Win32Exception ex)
             { throw new InvalidOperationException($"Unable to start ffmpeg at '{options.FfmpegPath}'. Install ffmpeg or select its executable.", ex); }
@@ -261,7 +294,12 @@ public static class FfmpegExporter
             complete = true;
         }
 
-        string ErrorText() { lock (errorLog) return errorLog.ToString(); }
+        string ErrorText()
+        {
+            lock (errorLog) return (hardwareH264
+                ? "Apple H.264 hardware encoding failed. The encoder may be unavailable or busy; select software H.264 to use the CPU encoder. FFmpeg details:\n"
+                : "") + errorLog;
+        }
 
         public void Dispose()
         {

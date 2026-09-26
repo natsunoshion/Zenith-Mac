@@ -5,9 +5,10 @@ Run the independent .NET 9 core checks:
 ```sh
 dotnet run --project tests/Zenith.Core.SelfTest
 dotnet run --project tests/Zenith.Core.SelfTest -- --audio --ffmpeg --stress
+dotnet run --project tests/Zenith.Core.SelfTest -- --audio --ffmpeg --videotoolbox --stress
 ```
 
-`--audio` initializes the native macOS Apple DLS AudioUnit graph and resets its channels without playing a test tone. `--ffmpeg` writes a short BGRA video and alpha mask, checks their frame count with ffprobe, verifies a renderer can extend output beyond its progress estimate, and verifies cancellation removes partial output. `--stress` parses one million notes and runs 1,000 interval queries. FFmpeg and ffprobe must be on `PATH` for the export checks.
+`--audio` initializes the native macOS Apple DLS AudioUnit graph and resets its channels without playing a test tone. `--ffmpeg` writes a short BGRA video and alpha mask, checks their frame count with ffprobe, verifies a renderer can extend output beyond its progress estimate, and verifies cancellation removes partial output. It also compares decoded serial/overlap video and mask frame hashes with a reused render buffer, checks completion before the next frame, and cancels while both encoder pipes have pending data. Add `--videotoolbox` to test an actual Apple H.264 hardware video/mask encode; this requires available hardware support and does not silently fall back. `--stress` parses one million notes and runs 1,000 interval queries. FFmpeg and ffprobe must be on `PATH` for the export checks.
 
 The parser checks include SMF format 0/1, running status, FIFO overlapping notes, zero-velocity note-off, tempo changes, PPQ and SMPTE timing, SysEx, invalid and truncated input, Zenith 8/12-byte color events, sustain across tracks, sostenuto, channel-mode controllers, and note closure. Transport checks cover seeking, controller restoration, pause/resume, and speed.
 
