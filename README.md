@@ -61,7 +61,7 @@ Scripted skins are loaded from the **Module Settings → Resources** page. The b
 
 ## Download
 
-The macOS release package will be published on the [Releases page](https://github.com/natsunoshion/Zenith-Mac/releases). The app bundle includes the .NET runtime; users do not need to install the .NET SDK.
+Download the latest macOS release from the [Releases page](https://github.com/natsunoshion/Zenith-Mac/releases/latest). The app bundle includes the .NET runtime; users do not need to install the .NET SDK.
 
 - **Platform:** Apple Silicon (arm64)
 - **Minimum macOS:** 12.0
