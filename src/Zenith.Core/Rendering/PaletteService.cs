@@ -14,9 +14,9 @@ public sealed class PaletteSelection
     Dictionary<string, Color4[]> palettes = new(StringComparer.Ordinal);
     Color4[]? previewColors;
     string selectedImage = "Random";
-    bool randomized = true;
-    // The original IsChecked=True initializes the WPF toggle and increments seed.
-    int seed = 1;
+    bool randomized;
+    // Keep palette columns aligned with MIDI channels until randomization is requested.
+    int seed;
     long revision;
 
     public PaletteSelection(float defaultSaturation = 1, float defaultValue = 1)

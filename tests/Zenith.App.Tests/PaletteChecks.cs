@@ -41,7 +41,7 @@ internal static class PaletteChecks
             var first = PaletteService.For(firstOwner);
             var second = PaletteService.For(new object(), .8f);
             Check(ReferenceEquals(first, PaletteService.For(firstOwner)), "A module retains its own picker instance");
-            Check(first.Randomized && first.Seed == 1, "Original checked initialization increments the picker seed");
+            Check(!first.Randomized && first.Seed == 0, "Palette channel order is preserved by default");
             Check(!first.GetPaletteNames().Contains("Invalid Width") && !first.GetPaletteNames().Contains("Invalid Data"),
                 "Palette enumeration filters invalid PNGs and unsupported widths");
             Check(first.GetPaletteNames().First() == "Random" && first.GetPaletteNames().Contains("PFA Config Colors"),
@@ -70,7 +70,7 @@ internal static class PaletteChecks
             var shuffled = first.GetColors(3);
             Check(!shuffled.SequenceEqual(channels) && shuffled.SequenceEqual(first.GetColors(3)),
                 "Enabling random order reshuffles deterministically for one seed");
-            Check(secondBefore.SequenceEqual(second.GetColors(3)) && second.Seed == 1 && !second.Randomized,
+            Check(secondBefore.SequenceEqual(second.GetColors(3)) && second.Seed == 0 && !second.Randomized,
                 "Another module's shuffle cannot alter this picker");
             first.SetRandomized(false);
             Check(channels.SequenceEqual(first.GetColors(3)), "Disabling random order restores channel order");
