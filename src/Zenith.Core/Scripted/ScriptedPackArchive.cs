@@ -43,8 +43,11 @@ internal sealed class ScriptedPackArchive : IDisposable
                 crypto.CopyTo(decoded);
             decoded.Position = 0;
             stream = decoded;
-            zip = new ZipArchive(decoded, ZipArchiveMode.Read, leaveOpen: true);
-            ScriptEntry = FindScript(zip.Entries.Select(e => e.FullName));
+            // Use SharpCompress for the decrypted ZIP payload. System.IO.Compression
+            // relies on a platform native zlib routine which can fail to load in a
+            // self-contained macOS app on another machine.
+            compressed = ArchiveFactory.OpenArchive(decoded);
+            ScriptEntry = FindScript(compressed.Entries.Where(e => !e.IsDirectory).Select(e => e.Key!));
         }
         else if (Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
         {
