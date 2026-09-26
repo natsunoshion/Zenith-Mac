@@ -35,7 +35,22 @@
     <SolidColorBrush x:Key="ZenithWarningBrush">#E8BD71</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithPreviewWellBrush">#111813</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithCloseHoverBrush">#A84D4D</SolidColorBrush>
+    <SolidColorBrush x:Key="ZenithClosePressedBrush">#913C3C</SolidColorBrush>
     <SolidColorBrush x:Key="ZenithOnDangerBrush">#FFFFFF</SolidColorBrush>
+    <!-- Replacing the complete ControlTheme removes Fluent's nested pointer/pressed
+         foreground setters, which otherwise override the custom template's text. -->
+    <ControlTheme x:Key="ZenithButtonTheme" TargetType="Button">
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      <Setter Property="Template"><ControlTemplate>
+        <Grid>
+        <Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.10"/></Transitions></Border.Transitions>
+          <ContentPresenter Name="PART_ContentPresenter" Background="Transparent" BorderThickness="0" BorderBrush="Transparent" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" RecognizesAccessKey="True" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+        </Border>
+        <Border Name="FocusRing" IsVisible="False" IsHitTestVisible="False" Margin="3" BorderThickness="1.5" BorderBrush="{TemplateBinding Foreground}" CornerRadius="5"/>
+        </Grid>
+      </ControlTemplate></Setter>
+    </ControlTheme>
   </Styles.Resources>
   <Style Selector="Window">
     <Setter Property="Background" Value="{DynamicResource ZenithWindowBrush}"/>
@@ -45,8 +60,8 @@
   </Style>
   <Style Selector="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/></Style>
   <Style Selector="Label"><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/><Setter Property="Padding" Value="0,4"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
-  <!-- The outer border owns every button state. Explicit transparent content
-       prevents Fluent pointer/pressed backgrounds from adding a second layer. -->
+  <!-- A single background changes between normal, hover and pressed; labels retain
+       their contrast color and all states keep the same bounds and corner radius. -->
   <Style Selector="Button">
     <Setter Property="Background" Value="{DynamicResource ZenithButtonBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/>
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -54,14 +69,12 @@
     <Setter Property="CornerRadius" Value="8"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Padding" Value="12,4"/><Setter Property="MinHeight" Value="26"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/>
-    <Setter Property="Template"><ControlTemplate><Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"><ContentPresenter Name="PART_ContentPresenter" Background="Transparent" BorderThickness="0" BorderBrush="Transparent" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/></Border></ControlTemplate></Setter>
+    <Setter Property="Theme" Value="{StaticResource ZenithButtonTheme}"/>
   </Style>
+  <Style Selector="Button:focus-visible /template/ Border#FocusRing"><Setter Property="IsVisible" Value="True"/></Style>
   <Style Selector="Button:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
   <Style Selector="Button:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
   <Style Selector="Button:disabled"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
-  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
-  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
-  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
   <Style Selector="Button.palette-swatch"><Setter Property="BorderBrush" Value="Transparent"/></Style>
   <Style Selector="Button.palette-swatch.selected"><Setter Property="BorderBrush" Value="{DynamicResource ZenithAccentBrush}"/></Style>
   <Style Selector="Button.primary"><Setter Property="Background" Value="{DynamicResource ZenithPrimaryBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithOnPrimaryBrush}"/><Setter Property="MinHeight" Value="32"/></Style>
@@ -69,11 +82,20 @@
   <Style Selector="Button.primary:pressed"><Setter Property="Background" Value="{DynamicResource ZenithPrimaryPressedBrush}"/></Style>
   <Style Selector="Button.primary:disabled"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
   <Style Selector="Button.window"><Setter Property="Width" Value="28"/><Setter Property="Height" Value="28"/><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="0"/><Setter Property="FontSize" Value="18"/><Setter Property="Background" Value="{DynamicResource ZenithButtonBrush}"/></Style>
+  <Style Selector="Button.window:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
+  <Style Selector="Button.window:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
   <Style Selector="Button.window.close:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithCloseHoverBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithOnDangerBrush}"/></Style>
+  <Style Selector="Button.window.close:pressed"><Setter Property="Background" Value="{DynamicResource ZenithClosePressedBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithOnDangerBrush}"/></Style>
   <Style Selector="Button.nav"><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="13,0"/><Setter Property="Height" Value="34"/><Setter Property="Foreground" Value="{DynamicResource ZenithMutedTextBrush}"/></Style>
   <Style Selector="Button.nav:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
   <Style Selector="Button.nav.active"><Setter Property="Background" Value="{DynamicResource ZenithSelectionBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithSelectionTextBrush}"/></Style>
+  <Style Selector="Button.nav:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
+  <Style Selector="Button.nav.active:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
+  <Style Selector="Button.nav.active:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
   <Style Selector="Button.status-action"><Setter Property="Background" Value="{DynamicResource ZenithSelectionBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithSelectionTextBrush}"/><Setter Property="Padding" Value="12,5"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="Button.status-action:pointerover"><Setter Property="Background" Value="{DynamicResource ZenithButtonHoverBrush}"/></Style>
+  <Style Selector="Button.status-action:pressed"><Setter Property="Background" Value="{DynamicResource ZenithButtonPressedBrush}"/></Style>
+  <Style Selector="Button.nav:disabled, Button.window:disabled, Button.status-action:disabled"><Setter Property="Background" Value="{DynamicResource ZenithDisabledBrush}"/><Setter Property="Foreground" Value="{DynamicResource ZenithDisabledTextBrush}"/></Style>
   <Style Selector="Border.card"><Setter Property="Background" Value="{DynamicResource ZenithSurfaceBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="14"/></Style>
   <Style Selector="Border.footer"><Setter Property="Background" Value="{DynamicResource ZenithHeaderBrush}"/><Setter Property="BorderBrush" Value="{DynamicResource ZenithBorderBrush}"/><Setter Property="BorderThickness" Value="0,1,0,0"/><Setter Property="Padding" Value="16,12"/></Style>
   <Style Selector="TextBlock.section-title"><Setter Property="FontSize" Value="14"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource ZenithTextBrush}"/></Style>

@@ -118,6 +118,16 @@ internal sealed class PreviewChecks(MainWindow main, AppController controller)
     public async Task Run(string directory)
     {
         Check(new MainWindowState().BackgroundOpacityPercent == 100, "Old settings must default to a fully visible background");
+        var defaultState = JsonSerializer.Deserialize<MainWindowState>("{}")!;
+        Check(defaultState.BackgroundPositionXPercent == 50 && defaultState.BackgroundPositionYPercent == 50,
+            "Old settings must default to a centered background crop");
+        State.BackgroundPositionXPercent = -10; State.BackgroundPositionYPercent = 200;
+        Check(State.BackgroundPositionXPercent == 0 && State.BackgroundPositionYPercent == 100,
+            "Crop position must clamp to the image edges");
+        State.BackgroundPositionXPercent = double.NaN; State.BackgroundPositionYPercent = double.PositiveInfinity;
+        Check(State.BackgroundPositionXPercent == 50 && State.BackgroundPositionYPercent == 50,
+            "Nonfinite crop positions must fall back to the center");
+        State.BackgroundPositionXPercent = 12.5; State.BackgroundPositionYPercent = 87.5;
         State.BackgroundOpacityPercent = -20;
         Check(State.BackgroundOpacityPercent == 0, "Background opacity must clamp below zero");
         State.BackgroundOpacityPercent = 120;
@@ -134,17 +144,23 @@ internal sealed class PreviewChecks(MainWindow main, AppController controller)
             && persisted.ShadowDistancePixels == 14 && persisted.ShadowOpacityPercent == 55,
             "Every shadow setting must round trip through settings JSON");
         Check(persisted.ThemeId == "latte", "Theme selection must round trip through settings JSON");
+        Check(persisted.BackgroundPositionXPercent == 12.5 && persisted.BackgroundPositionYPercent == 87.5,
+            "Both background crop positions must round trip through settings JSON");
         controller.GetType().GetMethod("SaveSettings", Private)!.Invoke(controller, null);
         State.BackgroundOpacityPercent = 1;
         State.UseHardwareEncoding = false;
         State.ShadowEnabled = false; State.ShadowBlurPixels = 64;
         State.ThemeId = "forest";
+        State.BackgroundPositionXPercent = 50; State.BackgroundPositionYPercent = 50;
         controller.GetType().GetMethod("LoadSettings", Private)!.Invoke(controller, null);
         Check(State.BackgroundOpacityPercent == 37.5 && State.UseHardwareEncoding,
             "Controller must restore saved opacity and encoder settings on restart");
         Check(State.ShadowEnabled && State.ShadowBlurPixels == 2.5,
             "Controller must restore saved shadow settings on restart");
         Check(State.ThemeId == "latte", "Controller must restore the saved theme on restart");
+        Check(State.BackgroundPositionXPercent == 12.5 && State.BackgroundPositionYPercent == 87.5,
+            "Controller must restore the saved crop on restart");
+        State.BackgroundPositionXPercent = 50; State.BackgroundPositionYPercent = 50;
         State.BackgroundOpacityPercent = 100;
         State.UseHardwareEncoding = false;
         State.ShadowEnabled = false; State.ShadowBlurPixels = 3; State.ShadowAngleDegrees = 45;
@@ -241,6 +257,26 @@ internal sealed class PreviewChecks(MainWindow main, AppController controller)
         Check(State.Paused && Near(Field<double>(preview, "position"), 1) && ReferenceEquals(Player, pausedPlayer)
             && ReferenceEquals(Field<Task?>(controller, "runningTask"), pausedTask) && changes.Count == 0,
             "Live opacity must retain pause/position/session and leave footer state stable");
+        string cropBackground = Path.Combine(directory, "crop-background.png");
+        byte[] cropPixels = new byte[8 * 4];
+        for (int y = 0; y < 8; y++)
+        {
+            cropPixels[y * 4 + 2] = (byte)(y < 4 ? 20 : 180);
+            cropPixels[y * 4 + 3] = 255;
+        }
+        SceneRenderer.SavePng(cropBackground, cropPixels, 1, 8);
+        State.BackgroundPath = cropBackground;
+        State.BackgroundPositionYPercent = 0;
+        await Until(() => Math.Abs(PixelRed(preview) - 10) <= 2, "Top-aligned crop must show the top of the source image");
+        int cropVersion = Field<int>(controller, "version");
+        State.BackgroundPositionXPercent = 75;
+        State.BackgroundPositionYPercent = 100;
+        await Until(() => Math.Abs(PixelRed(preview) - 90) <= 2, "Moving a paused crop to the bottom must update its displayed pixels");
+        Check(renderingSettings.BGPositionX == .75 && renderingSettings.BGPositionY == 1
+            && Field<int>(controller, "version") == cropVersion && State.Paused
+            && Near(Field<double>(preview, "position"), 1) && ReferenceEquals(Player, pausedPlayer)
+            && ReferenceEquals(Field<Task?>(controller, "runningTask"), pausedTask) && changes.Count == 0,
+            "Crop edits must update the renderer without advancing the skin or restarting the paused session");
         State.UseBackground = false;
         await Until(() => PixelRed(preview) == 0, "Disabling background did not recompose the paused frame");
         State.ShadowEnabled = true; State.ShadowAngleDegrees = 270; State.ShadowDistancePixels = 4;
@@ -252,7 +288,7 @@ internal sealed class PreviewChecks(MainWindow main, AppController controller)
         State.ShadowEnabled = false;
         await Until(() => !renderingSettings.Shadow.Enabled, "Live shadow disable did not reach the render thread");
         int renderVersion = Field<int>(controller, "version");
-        State.ThemeId = "nord";
+        State.ThemeId = "nord-dark";
         await Task.Delay(40);
         Check(Field<int>(controller, "version") == renderVersion && State.Paused
             && Near(Field<double>(preview, "position"), 1) && ReferenceEquals(Player, pausedPlayer)
@@ -295,13 +331,16 @@ internal sealed class PreviewChecks(MainWindow main, AppController controller)
         State.IsRendering = true; State.IsBusy = true;
         string exportBackground = renderingSettings.BGImage;
         double exportOpacity = renderingSettings.BGOpacity;
+        double exportX = renderingSettings.BGPositionX, exportY = renderingSettings.BGPositionY;
         var exportShadow = renderingSettings.Shadow;
         State.BackgroundPath = background;
         State.BackgroundOpacityPercent = 25;
+        State.BackgroundPositionXPercent = 20; State.BackgroundPositionYPercent = 30;
         State.UseBackground = true;
         State.ShadowEnabled = true; State.ShadowOpacityPercent = 25;
         await Task.Delay(40);
         Check(renderingSettings.BGImage == exportBackground && renderingSettings.BGOpacity == exportOpacity
+            && renderingSettings.BGPositionX == exportX && renderingSettings.BGPositionY == exportY
             && renderingSettings.Shadow == exportShadow
             && !unrelatedRun.IsCancellationRequested,
             "Changing UI background state must not alter or cancel a frozen export session");

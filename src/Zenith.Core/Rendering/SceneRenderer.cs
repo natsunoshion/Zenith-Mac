@@ -64,7 +64,7 @@ public sealed class SceneRenderer : IDisposable
         {
             context = new();
             target = new(settings.width, settings.height);
-            quads = new();
+            quads = new(correctCoverage: script != null);
             this.paletteSelection = paletteSelection ?? (plugin != null
                 ? PaletteService.For(plugin.SettingsControl, plugin is PFARender.Render ? .8f : 1f)
                 : new PaletteSelection());
@@ -106,7 +106,9 @@ public sealed class SceneRenderer : IDisposable
             // The module can apply its own selected palette in ReloadTrackColors.
             // Snapshot after that call so frame updates cannot restore stale colors.
             baseColors = colors.Select(t => t.Select(c => new NoteColor { left = c.left, right = c.right }).ToArray()).ToArray();
-            postProcessor = new(settings.width, settings.height, settings.downscale, settings.BGImage, settings.BGOpacity);
+            postProcessor = new(settings.width, settings.height, settings.downscale, settings.BGImage,
+                settings.BGOpacity, settings.BGPositionX, settings.BGPositionY);
+            postProcessor.SetPremultipliedForeground(script != null);
             postProcessor.SetShadow(settings.Shadow);
         }
         catch (Exception failure)
@@ -119,12 +121,17 @@ public sealed class SceneRenderer : IDisposable
     double Units(double seconds)=>settings.timeBasedNotes?seconds*1000:midi.TempoMap.SecondsToTick(seconds);
     /// <summary>Hot-update background resources on the render thread without resetting the module or notes.</summary>
     public bool UpdateBackground(string? path, double opacity)
+        => UpdateBackground(path, opacity, settings.BGPositionX, settings.BGPositionY);
+    /// <summary>Cover the frame without distortion; position 0 selects the left/top crop and 1 the right/bottom crop.</summary>
+    public bool UpdateBackground(string? path, double opacity, double positionX, double positionY)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         context.MakeCurrent();
-        bool changed = postProcessor.SetBackground(path, opacity);
+        bool changed = postProcessor.SetBackground(path, opacity, positionX, positionY);
         settings.BGImage = path;
         settings.BGOpacity = opacity;
+        settings.BGPositionX = positionX;
+        settings.BGPositionY = positionY;
         return changed;
     }
     /// <summary>Present the existing foreground with updated background settings; does not advance script state.</summary>

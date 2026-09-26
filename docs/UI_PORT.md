@@ -53,6 +53,14 @@ text remain vertically centered. Compact numeric spinners retain separate up
 and down actions and a visible gap. The title bar has one hover surface per
 button; it does not stack a second Fluent background above that surface.
 
+Buttons use an independent ControlTheme so Fluent's nested pointer-state rules
+cannot override the label color. Hover and press change the background with a
+100 ms transition while keeping the label contrast and control bounds stable.
+Keyboard focus uses a separate inset outline in the button text color, without
+changing padding or size. `artifacts/button-crop-qa/` records six-theme pointer
+states, keyboard focus, numeric-stepper clicks, live crop-slider dragging and
+default/minimum-window layouts.
+
 The General footer provides a persistent theme selector. Window-local semantic
 color resources cover main pages, dynamic settings, the palette editor and
 dialogs, including hover and disabled states. Preview and export pixels are
@@ -61,7 +69,8 @@ in [Interface themes](THEMES.md).
 
 The main General page groups MIDI loading, resolution, render options,
 background, drop shadow and preview settings. The background path is one line with a
-full-path tooltip. Opacity controls retain their layout when disabled. Toggling
+full-path tooltip. Opacity and horizontal/vertical crop-position controls retain
+their layout when disabled; Center image resets both positions to 50%. Toggling
 or changing a background no longer calls Stop/Start: the render worker updates
 its texture and composition settings, and paused edits reuse the existing
 foreground. This avoids footer state changes and preserves script state.

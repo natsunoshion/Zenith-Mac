@@ -18,13 +18,22 @@ public sealed class ScenePostProcessor : IDisposable
     string backgroundPath = "";
     string loadedBackgroundPath = "";
     double backgroundOpacity = 1;
+    double backgroundPositionX = .5;
+    double backgroundPositionY = .5;
+    int backgroundWidth;
+    int backgroundHeight;
     bool backgroundEnabled;
     ForegroundShadowOptions shadow = ForegroundShadowOptions.Default;
     ForegroundShadow? shadowRenderer;
     RenderTarget? shadowBaseline;
+    bool premultipliedForeground;
     bool disposed;
 
     public ScenePostProcessor(int width, int height, int downscale, string? backgroundPath = null, double backgroundOpacity = 1)
+        : this(width, height, downscale, backgroundPath, backgroundOpacity, .5, .5) { }
+
+    public ScenePostProcessor(int width, int height, int downscale, string? backgroundPath, double backgroundOpacity,
+        double backgroundPositionX, double backgroundPositionY)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(downscale);
         factor = downscale;
@@ -49,9 +58,11 @@ public sealed class ScenePostProcessor : IDisposable
                 uniform sampler2D image;
                 uniform sampler2D originalImage;
                 uniform int mode;
+                uniform int flip;
                 uniform int factor;
                 uniform vec2 res;
                 uniform float backgroundOpacity;
+                uniform vec4 backgroundUv;
                 void main() {
                     if (mode == 1) {
                         // These offsets, linear filtering, and texture REPEAT
@@ -63,6 +74,20 @@ public sealed class ScenePostProcessor : IDisposable
                             for (int j = 0; j < factor; j++)
                                 color += texture(image, UV + vec2(i * stepX, j * stepY));
                         color /= factor * factor;
+                    } else if (mode >= 6) {
+                        vec2 sampleUv = flip != 0 ? UV * backgroundUv.xy + backgroundUv.zw : UV;
+                        color = texture(image, sampleUv);
+                        if (mode == 8) {
+                            // Uploaded images are straight RGBA; convert once
+                            // before placing them below a premultiplied scene.
+                            color.a *= backgroundOpacity;
+                            color.rgb *= color.a;
+                        } else if (mode == 7) {
+                            // A separate mask needs straight RGB. Additive light
+                            // can exceed coverage; normalized 8-bit output may
+                            // clip such values, as in the original mask format.
+                            color.rgb = color.a > 0 ? color.rgb / color.a : vec3(0);
+                        }
                     } else if (mode >= 4) {
                         vec4 original = texture(originalImage, UV);
                         vec4 shaded = texture(image, UV);
@@ -77,7 +102,11 @@ public sealed class ScenePostProcessor : IDisposable
                         if (mode == 5) rgb = shaded.a > 0 ? rgb / shaded.a : vec3(0);
                         color = vec4(rgb, shaded.a);
                     } else {
-                        color = texture(image, UV);
+                        // Only the uploaded PNG is flipped. Its UV rectangle
+                        // implements aspect-preserving cover, before the legacy
+                        // alpha compensation and background opacity passes.
+                        vec2 sampleUv = flip != 0 ? UV * backgroundUv.xy + backgroundUv.zw : UV;
+                        color = texture(image, sampleUv);
                         if (mode == 2) {
                             // The original writes RGB/alpha to one encoder and
                             // alpha grayscale to another. Carry the latter in A
@@ -101,7 +130,7 @@ public sealed class ScenePostProcessor : IDisposable
                 }
                 """);
             vao = GL.GenVertexArray();
-            SetBackground(backgroundPath, backgroundOpacity);
+            SetBackground(backgroundPath, backgroundOpacity, backgroundPositionX, backgroundPositionY);
         }
         catch (Exception failure)
         {
@@ -113,12 +142,21 @@ public sealed class ScenePostProcessor : IDisposable
 
     /// <summary>Update only the background. Call on the owning GL thread.</summary>
     public bool SetBackground(string? path, double opacity)
+        => SetBackground(path, opacity, backgroundPositionX, backgroundPositionY);
+
+    /// <summary>Position ranges from left/top (0) to right/bottom (1), with a centered crop at .5.</summary>
+    public bool SetBackground(string? path, double opacity, double positionX, double positionY)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (!double.IsFinite(opacity) || opacity is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(opacity));
+        if (!double.IsFinite(positionX) || positionX is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(positionX));
+        if (!double.IsFinite(positionY) || positionY is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(positionY));
         path ??= "";
-        if (path == backgroundPath && opacity == backgroundOpacity) return false;
+        if (path == backgroundPath && opacity == backgroundOpacity
+            && positionX == backgroundPositionX && positionY == backgroundPositionY) return false;
         bool enabled = !string.IsNullOrWhiteSpace(path)
             && (background != 0 && loadedBackgroundPath == path || File.Exists(path));
         if (enabled && (background == 0 || loadedBackgroundPath != path))
@@ -132,7 +170,9 @@ public sealed class ScenePostProcessor : IDisposable
             int oldTexture = background;
             try
             {
-                background = LoadBackground(path);
+                background = LoadBackground(path, out int width, out int height);
+                backgroundWidth = width;
+                backgroundHeight = height;
                 if (oldTexture != 0) GL.DeleteTexture(oldTexture);
                 loadedBackgroundPath = path;
             }
@@ -149,11 +189,13 @@ public sealed class ScenePostProcessor : IDisposable
         }
         backgroundPath = path;
         backgroundOpacity = opacity;
+        backgroundPositionX = positionX;
+        backgroundPositionY = positionY;
         backgroundEnabled = enabled;
         return true;
     }
 
-    static int LoadBackground(string path)
+    static int LoadBackground(string path, out int width, out int height)
     {
         using var encoded = SKData.Create(path);
         using var codec = SKCodec.Create(encoded)
@@ -162,6 +204,8 @@ public sealed class ScenePostProcessor : IDisposable
             SKColorType.Bgra8888, SKAlphaType.Unpremul);
         if (codec.GetPixels(bitmap.Info, bitmap.GetPixels()) != SKCodecResult.Success)
             throw new InvalidDataException("Could not decode background image: " + path);
+        width = bitmap.Width;
+        height = bitmap.Height;
         int texture = GL.GenTexture();
         try
         {
@@ -190,6 +234,19 @@ public sealed class ScenePostProcessor : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Use true source-over coverage and premultiplied RGB supplied by the
+    /// corrected Scripted renderer. The default retains the builtin/legacy
+    /// terminal passes. Change only on the owning GL thread.
+    /// </summary>
+    public bool SetPremultipliedForeground(bool enabled)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (premultipliedForeground == enabled) return false;
+        premultipliedForeground = enabled;
+        return true;
+    }
+
     /// <returns>Top-down BGRA. In mask mode A carries the original separate mask image.</returns>
     public byte[] Render(int sourceTexture, bool alphaMask = false)
     {
@@ -203,36 +260,52 @@ public sealed class ScenePostProcessor : IDisposable
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.ColorMask(true, true, true, true);
             GL.BlendEquationSeparate(BlendEquationMode.FuncAdd, BlendEquationMode.FuncAdd);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            SetForegroundBlend();
             GL.Uniform1(GL.GetUniformLocation(program, "image"), 0);
             GL.Uniform1(GL.GetUniformLocation(program, "factor"), factor);
             GL.Uniform2(GL.GetUniformLocation(program, "res"), (float)composite.Width, (float)composite.Height);
             GL.Uniform1(GL.GetUniformLocation(program, "backgroundOpacity"), (float)backgroundOpacity);
+            double imageAspect = backgroundHeight > 0 ? (double)backgroundWidth / backgroundHeight : 1;
+            double frameAspect = (double)composite.Width / composite.Height;
+            double scaleX = Math.Min(1, frameAspect / imageAspect);
+            double scaleY = Math.Min(1, imageAspect / frameAspect);
+            GL.Uniform4(GL.GetUniformLocation(program, "backgroundUv"), (float)scaleX, (float)scaleY,
+                (float)((1 - scaleX) * backgroundPositionX), (float)((1 - scaleY) * backgroundPositionY));
 
             Clear(composite);
             GL.Enable(EnableCap.Blend);
             if (backgroundEnabled && background != 0 && backgroundOpacity > 0)
-                Draw(background, backgroundOpacity == 1 ? 0 : 3, flip: true);
+                Draw(background, premultipliedForeground ? 8 : backgroundOpacity == 1 ? 0 : 3, flip: true);
             if (shadow.Enabled && shadow.Opacity > 0)
             {
-                shadowBaseline ??= new(composite.Width, composite.Height, includeDepth: false);
-                GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, composite.Framebuffer);
-                GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, shadowBaseline.Framebuffer);
-                GL.BlitFramebuffer(0, 0, composite.Width, composite.Height, 0, 0, composite.Width, composite.Height,
-                    ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, shadowBaseline.Framebuffer);
-                Draw(sourceTexture, factor > 1 ? 1 : 0);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, composite.Framebuffer);
+                if (!premultipliedForeground)
+                {
+                    shadowBaseline ??= new(composite.Width, composite.Height, includeDepth: false);
+                    GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, composite.Framebuffer);
+                    GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, shadowBaseline.Framebuffer);
+                    GL.BlitFramebuffer(0, 0, composite.Width, composite.Height, 0, 0, composite.Width, composite.Height,
+                        ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, shadowBaseline.Framebuffer);
+                    Draw(sourceTexture, factor > 1 ? 1 : 0);
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, composite.Framebuffer);
+                }
                 shadowRenderer ??= new(composite.Width, composite.Height, factor);
-                shadowRenderer.Draw(sourceTexture, composite.Framebuffer, shadow);
+                shadowRenderer.Draw(sourceTexture, composite.Framebuffer, shadow, premultipliedForeground);
                 GL.BindVertexArray(vao);
                 GL.UseProgram(program);
-                GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                SetForegroundBlend();
             }
-            Draw(sourceTexture, factor > 1 ? 1 : 0);
+            // SSAA averages premultiplied RGB and coverage together, before
+            // blending, so faint particles do not get multiplied by alpha twice.
+            Draw(sourceTexture, factor > 1 ? 1 : premultipliedForeground ? 6 : 0);
 
             Clear(output);
-            if (shadow.Enabled && shadow.Opacity > 0)
+            if (premultipliedForeground)
+            {
+                GL.Disable(EnableCap.Blend);
+                Draw(composite.Texture, alphaMask ? 7 : 6);
+            }
+            else if (shadow.Enabled && shadow.Opacity > 0)
             {
                 GL.Disable(EnableCap.Blend);
                 GL.ActiveTexture(TextureUnit.Texture1);
@@ -263,6 +336,14 @@ public sealed class ScenePostProcessor : IDisposable
             return output.ReadBgra();
         }
         finally { GL.BindVertexArray(previousVao); }
+    }
+
+    void SetForegroundBlend()
+    {
+        if (premultipliedForeground)
+            GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        else
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
     }
 
     static void Clear(RenderTarget target)

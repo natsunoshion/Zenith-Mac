@@ -42,13 +42,24 @@
             <TextBlock Text="{DynamicResource superResWarning}" Classes="hint" TextWrapping="Wrap"/>
           </StackPanel></Border>
         </Grid>
-        <Border Classes="card" IsEnabled="{Binding NotRendering}"><StackPanel Spacing="10">
+        <Border x:Name="BackgroundCard" Classes="card" IsEnabled="{Binding NotRendering}"><StackPanel Spacing="10">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
             <CheckBox Content="{DynamicResource useBackgroundImage}" IsChecked="{Binding UseBackground}"/>
             <TextBox Grid.Column="1" Text="{Binding BackgroundPath}" TextWrapping="NoWrap" Height="30" IsReadOnly="True" Watermark="Choose a background image" ToolTip.Tip="{Binding BackgroundPath}"/>
             <Button Grid.Column="2" Content="{DynamicResource browse}" Tag="browse-background" Click="ActionClick" IsEnabled="{Binding UseBackground}"/>
           </Grid>
-          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Label Content="Opacity"/><local:ValueSlider x:Name="BackgroundOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding BackgroundOpacityPercent}" IsEnabled="{Binding UseBackground}"/><TextBlock Grid.Column="2" Text="%" Classes="hint"/></Grid>
+          <Grid ColumnDefinitions="130,*,Auto" ColumnSpacing="12"><Label Content="Opacity"/><local:ValueSlider x:Name="BackgroundOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding BackgroundOpacityPercent}" IsEnabled="{Binding UseBackground}"/><TextBlock Grid.Column="2" Text="%" Classes="hint"/></Grid>
+          <Grid ColumnDefinitions="130,*,Auto" ColumnSpacing="12" IsEnabled="{Binding UseBackground}" ToolTip.Tip="0%: left · 50%: center · 100%: right. Only moves when the image extends beyond the frame on this axis.">
+            <StackPanel Spacing="2"><TextBlock Text="Horizontal position"/><TextBlock Text="Left → Center → Right" Classes="hint"/></StackPanel>
+            <local:ValueSlider x:Name="BackgroundPositionXSlider" Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding BackgroundPositionXPercent}"/>
+            <TextBlock Grid.Column="2" Text="%" Classes="hint"/>
+          </Grid>
+          <Grid ColumnDefinitions="130,*,Auto" ColumnSpacing="12" IsEnabled="{Binding UseBackground}" ToolTip.Tip="0%: top · 50%: center · 100%: bottom. Only moves when the image extends beyond the frame on this axis.">
+            <StackPanel Spacing="2"><TextBlock Text="Vertical position"/><TextBlock Text="Top → Center → Bottom" Classes="hint"/></StackPanel>
+            <local:ValueSlider x:Name="BackgroundPositionYSlider" Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding BackgroundPositionYPercent}"/>
+            <TextBlock Grid.Column="2" Text="%" Classes="hint"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><TextBlock Text="Fill the frame while preserving the image’s proportions. Areas outside the frame are cropped." Classes="hint" TextWrapping="Wrap"/><Button x:Name="CenterBackgroundButton" Grid.Column="1" Content="Center image" Tag="center-background" Click="ActionClick" IsEnabled="{Binding UseBackground}" ToolTip.Tip="Reset horizontal and vertical position to 50%"/></Grid>
         </StackPanel></Border>
         <Border Classes="card" IsEnabled="{Binding NotRendering}"><StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Drop shadow" Classes="section-title"/><CheckBox Grid.Column="1" Content="Enable shadow" IsChecked="{Binding ShadowEnabled}"/></Grid>

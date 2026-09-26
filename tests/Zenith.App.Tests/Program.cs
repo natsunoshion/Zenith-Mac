@@ -2,6 +2,12 @@ using Zenith.Mac;
 using Zenith.Core.Rendering;
 using ZenithEngine;
 
+if (args.Contains("--premultiplied"))
+{
+    PremultipliedCompositingChecks.Run();
+    return;
+}
+
 if (args.Contains("--shadow"))
 {
     ShadowChecks.Run(export: args.Contains("--export"));

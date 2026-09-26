@@ -59,6 +59,7 @@ internal sealed class ForegroundShadow : IDisposable
                 uniform float offsetX;
                 uniform int extractOnly;
                 uniform int sourceIsCoverage;
+                uniform int correctCoverage;
                 uniform float weights[193];
                 float alphaAt(vec2 p) {
                     if (any(lessThan(p, vec2(0))) || any(greaterThan(p, vec2(1)))) return 0;
@@ -68,7 +69,7 @@ internal sealed class ForegroundShadow : IDisposable
                     if (sourceIsCoverage != 0) return alphaAt(p);
                     // Match the alpha used to blend the original foreground
                     // onto its background, including the original SSAA path.
-                    if (factor == 1) return sqrt(max(0, alphaAt(p)));
+                    if (factor == 1) return correctCoverage != 0 ? alphaAt(p) : sqrt(max(0, alphaAt(p)));
                     float value = 0;
                     for (int x = 0; x < factor; x++)
                         for (int y = 0; y < factor; y++)
@@ -129,7 +130,8 @@ internal sealed class ForegroundShadow : IDisposable
         }
     }
 
-    internal void Draw(int source, int destinationFramebuffer, ForegroundShadowOptions options)
+    internal void Draw(int source, int destinationFramebuffer, ForegroundShadowOptions options,
+        bool premultipliedForeground = false)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (lastBlur != options.BlurPixels)
@@ -161,14 +163,14 @@ internal sealed class ForegroundShadow : IDisposable
             if (resolvedCoverage != null)
             {
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, resolvedCoverage.Framebuffer);
-                Configure(horizontalProgram, source);
+                Configure(horizontalProgram, source, premultipliedForeground);
                 GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "factor"), factor);
                 GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "extractOnly"), 1);
                 GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "sourceIsCoverage"), 0);
                 GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
             }
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, horizontal.Framebuffer);
-            Configure(horizontalProgram, resolvedCoverage?.Texture ?? source);
+            Configure(horizontalProgram, resolvedCoverage?.Texture ?? source, premultipliedForeground);
             GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "factor"), factor);
             GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "extractOnly"), 0);
             GL.Uniform1(GL.GetUniformLocation(horizontalProgram, "sourceIsCoverage"), resolvedCoverage == null ? 0 : 1);
@@ -178,7 +180,7 @@ internal sealed class ForegroundShadow : IDisposable
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, destinationFramebuffer);
-            Configure(verticalProgram, horizontal.Texture);
+            Configure(verticalProgram, horizontal.Texture, premultipliedForeground);
             GL.Uniform2(GL.GetUniformLocation(verticalProgram, "offset"),
                 0f,
                 (float)(-Math.Sin(angle) * options.DistancePixels / horizontal.Height));
@@ -193,7 +195,7 @@ internal sealed class ForegroundShadow : IDisposable
         finally { GL.BindSampler(0, previousSampler); }
     }
 
-    void Configure(int program, int texture)
+    void Configure(int program, int texture, bool premultipliedForeground)
     {
         GL.UseProgram(program);
         GL.BindTexture(TextureTarget.Texture2D, texture);
@@ -201,6 +203,8 @@ internal sealed class ForegroundShadow : IDisposable
         GL.Uniform2(GL.GetUniformLocation(program, "res"), (float)horizontal.Width, (float)horizontal.Height);
         GL.Uniform1(GL.GetUniformLocation(program, "radius"), radius);
         GL.Uniform1(GL.GetUniformLocation(program, "weights"), weights.Length, weights);
+        if (program == horizontalProgram)
+            GL.Uniform1(GL.GetUniformLocation(program, "correctCoverage"), premultipliedForeground ? 1 : 0);
     }
 
     public void Dispose()

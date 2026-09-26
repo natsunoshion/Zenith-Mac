@@ -44,9 +44,10 @@ dotnet run --project src/Zenith.Mac
 
 - 复用原 Classic / Flat / PFA / MIDITrail / Textured / Note Counter 渲染算法和着色器；在 macOS 原生 CGL OpenGL 4.1 上运行。
 - 保留 General / Modules / Module Settings / Render 四页结构和多语言字典，采用圆角控件和分区布局。General 的 **Theme** 可切换六套浅色／深色主题并保存选择，默认浅石灰＋鼠尾草绿；主题仅改变界面，保留 MIDI、皮肤和导出画面的颜色。内置模块设置由原 XAML 定义转换，脚本设置仍由皮肤生成。方案与来源见 [界面主题](docs/THEMES.md)。
-- 背景图片支持 0–100% 不透明度；预览中调整开关、图片和不透明度会直接更新背景，保留播放位置、暂停状态和粒子状态。100% 保持原有合成结果，50% 可在黑底上减淡背景；导出使用开始时的背景设置。
+- 背景图片保持比例铺满画面，超出部分裁剪；水平／垂直位置滑块和一键居中控制取景，支持 0–100% 不透明度。预览中调整背景会直接更新合成，保留播放位置、暂停状态和粒子状态。50% 可在黑底上减淡背景；导出使用开始时的背景设置。
 - General 提供 **Drop shadow**：调整黑色投影的模糊度、方向、距离和不透明度，预览可实时修改，导出遮罩包含柔和阴影。它基于整个皮肤前景的透明轮廓；关闭皮肤自带的不透明背景即可显露音符投影。使用方法见 [背景与阴影](docs/BACKGROUND_EFFECTS.md)。
 - 原 `.zrp` AES/ZIP 解码、C# 运行时编译、纹理、文字、四顶点颜色/UV、三种纹理着色器、两种混合模式、粒子、可变 Note 元数据、生命周期和动态 UI。
+- Scripted 透明合成已修正火花柔光在背景上产生灰圈的问题，重叠柔光、SSAA 和阴影使用一致的透明覆盖率；这部分透明边缘及遮罩输出有意区别于原版的 alpha 补偿结果。
 - 已验证的原 `Synthesia X.zrp` 加载 88 张纹理、2 种字体、306 项设置、11 份原配置。也支持原 Example Flat / Textured / Particles；这些资源需从原发布包准备。
 - 调色板选择、随机开关和种子按模块独立保存于运行状态，支持预览热更新；配置与默认值恢复会同步选色和 MIDITrail Aura。调色板位于 `~/Library/Application Support/Zenith-Mac/Palettes`，内置 PNG 仅补充缺失文件，不向应用包写入。内置 Scripted 配置首次合并到同级 `ScriptedProfiles` 用户目录；外部皮肤仍使用相邻 `.profiles.json`。
 - Scripted 右栏及内置模块提供 **New Palette / Edit Palette**：可编辑 16 通道、多行颜色、左右渐变、RGBA 和 Hex，保存后自动选中并热更新，保留原 Random 行为。说明与验证见 [调色板编辑器](docs/PALETTE_EDITOR.md)。

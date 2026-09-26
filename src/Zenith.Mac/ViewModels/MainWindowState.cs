@@ -51,6 +51,8 @@ public sealed class MainWindowState : INotifyPropertyChanged
     public bool UseBackground { get => Get(false); set => Set(value); }
     public string BackgroundPath { get => Get(""); set => Set(value); }
     public double BackgroundOpacityPercent { get => Get(100d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 100); }
+    public double BackgroundPositionXPercent { get => Get(50d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 50); }
+    public double BackgroundPositionYPercent { get => Get(50d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 50); }
     public bool ShadowEnabled { get => Get(false); set => Set(value); }
     public double ShadowBlurPixels { get => Get(3d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 64) : 3); }
     public double ShadowAngleDegrees { get => Get(45d); set => Set(double.IsFinite(value) ? Math.Clamp(value, 0, 360) : 45); }

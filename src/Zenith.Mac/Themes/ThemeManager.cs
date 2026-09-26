@@ -86,7 +86,8 @@ public static class ThemeManager
             ["Selection"] = p.Selection, ["SelectionText"] = p.Text,
             ["Success"] = p.Success, ["Info"] = p.Info, ["Error"] = p.Error,
             ["Warning"] = p.Warning, ["PreviewWell"] = p.Window,
-            ["CloseHover"] = p.Error, ["OnDanger"] = p.Dark ? p.Window : "#FFFFFF"
+            ["CloseHover"] = p.Error, ["ClosePressed"] = Mix(p.Error, p.Dark ? "#FFFFFF" : "#000000", .14),
+            ["OnDanger"] = p.Dark ? p.Window : "#FFFFFF"
         };
         foreach (var (name, color) in colors) Brush("Zenith" + name + "Brush", color);
 

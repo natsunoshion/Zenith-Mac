@@ -10,12 +10,17 @@ namespace Zenith.Core.Rendering;
 public sealed class ScriptedGlRenderer : IDisposable
 {
     readonly int program, buffer, indices;
+    readonly bool correctCoverage;
     readonly Dictionary<Texture,int> textures=new();
     readonly Dictionary<string,(Texture texture,double aspect)> textTextures=new();
     readonly float[] vertices=new float[4096*4*8];
     int count; Texture? texture; TextureShaders shader; ScriptedEngine.BlendFunc blend;
-    public ScriptedGlRenderer()
+    // Keep the original constructor and its exact alpha accumulation for API
+    // consumers that explicitly reproduce the Windows drawing formulas.
+    public ScriptedGlRenderer() : this(false) { }
+    public ScriptedGlRenderer(bool correctCoverage)
     {
+        this.correctCoverage = correctCoverage;
         program=Compile("""
 #version 410 core
 layout(location=0) in vec2 position;
@@ -77,7 +82,11 @@ void main(){
         if(count==0)return;
         GL.UseProgram(program);GL.Disable(EnableCap.DepthTest);GL.Enable(EnableCap.Blend);
         GL.BlendEquationSeparate(BlendEquationMode.FuncAdd,BlendEquationMode.FuncAdd);
-        GL.BlendFuncSeparate(BlendingFactorSrc.SrcAlpha,blend==ScriptedEngine.BlendFunc.Add?BlendingFactorDest.One:BlendingFactorDest.OneMinusSrcAlpha,BlendingFactorSrc.One,BlendingFactorDest.One);
+        // RGB retains each original Mix/Add operation. Scene composition needs
+        // coverage, not the legacy sum of fragment alphas: overlapping white
+        // haze must not become more opaque than its premultiplied light.
+        GL.BlendFuncSeparate(BlendingFactorSrc.SrcAlpha,blend==ScriptedEngine.BlendFunc.Add?BlendingFactorDest.One:BlendingFactorDest.OneMinusSrcAlpha,
+            BlendingFactorSrc.One,correctCoverage?BlendingFactorDest.OneMinusSrcAlpha:BlendingFactorDest.One);
         GL.ActiveTexture(TextureUnit.Texture0);GL.BindTexture(TextureTarget.Texture2D,texture==null?0:GetTexture(texture));
         GL.Uniform1(GL.GetUniformLocation(program,"hasTexture"),texture==null?0:1);GL.Uniform1(GL.GetUniformLocation(program,"mode"),(int)shader);GL.Uniform1(GL.GetUniformLocation(program,"image"),0);
         GL.BindBuffer(BufferTarget.ArrayBuffer,buffer);GL.BufferData(BufferTarget.ArrayBuffer,count*32*4,vertices,BufferUsageHint.StreamDraw);

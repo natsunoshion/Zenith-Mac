@@ -173,6 +173,10 @@ public partial class MainWindow : Window
                     if (midi == null) return;
                     State.MidiPath = midi;
                     break;
+                case "center-background":
+                    State.BackgroundPositionXPercent = 50;
+                    State.BackgroundPositionYPercent = 50;
+                    return;
                 case "browse-background":
                     var bg = await OpenFile("Use Background", FilePickerFileTypes.ImageAll);
                     if (bg == null) return;

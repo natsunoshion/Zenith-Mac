@@ -403,6 +403,8 @@ public sealed class AppController : IDisposable
         settings.ignoreColorEvents = State.IgnoreColorEvents;
         settings.BGImage = State.UseBackground ? State.BackgroundPath : "";
         settings.BGOpacity = State.BackgroundOpacityPercent / 100;
+        settings.BGPositionX = State.BackgroundPositionXPercent / 100;
+        settings.BGPositionY = State.BackgroundPositionYPercent / 100;
         settings.Shadow = CurrentShadow;
         settings.Paused = State.Paused;
         settings.tempoMultiplier = State.TempoMultiplier;
@@ -534,6 +536,8 @@ public sealed class AppController : IDisposable
                 double previousFrameMultiplier = 1;
                 string appliedBackground = settings.BGImage ?? "";
                 double appliedBackgroundOpacity = settings.BGOpacity;
+                double appliedBackgroundX = settings.BGPositionX;
+                double appliedBackgroundY = settings.BGPositionY;
                 var appliedShadow = settings.Shadow;
                 while (!token.IsCancellationRequested)
                 {
@@ -568,7 +572,10 @@ public sealed class AppController : IDisposable
                     // With no effective image, toggling the checkbox or opacity
                     // has no visual work to schedule and must not reset playback.
                     double backgroundOpacity = string.IsNullOrWhiteSpace(backgroundPath) ? 1 : State.BackgroundOpacityPercent / 100;
-                    bool backgroundChanged = backgroundPath != appliedBackground || backgroundOpacity != appliedBackgroundOpacity;
+                    double backgroundX = State.BackgroundPositionXPercent / 100;
+                    double backgroundY = State.BackgroundPositionYPercent / 100;
+                    bool backgroundChanged = backgroundPath != appliedBackground || backgroundOpacity != appliedBackgroundOpacity
+                        || backgroundX != appliedBackgroundX || backgroundY != appliedBackgroundY;
                     var shadow = CurrentShadow;
                     bool shadowChanged = shadow != appliedShadow;
                     if (foregroundChanged || backgroundChanged || shadowChanged)
@@ -577,7 +584,7 @@ public sealed class AppController : IDisposable
                         settings.ignoreColorEvents = State.IgnoreColorEvents;
                         var data = await worker.Run(r =>
                         {
-                            if (backgroundChanged) r.UpdateBackground(backgroundPath, backgroundOpacity);
+                            if (backgroundChanged) r.UpdateBackground(backgroundPath, backgroundOpacity, backgroundX, backgroundY);
                             if (shadowChanged) r.UpdateShadow(shadow);
                             r.ScreenTime = State.NoteScreenTime;
                             r.FirstKey = (int)State.FirstNote;
@@ -595,6 +602,8 @@ public sealed class AppController : IDisposable
                         renderedVersion = currentVersion;
                         appliedBackground = backgroundPath;
                         appliedBackgroundOpacity = backgroundOpacity;
+                        appliedBackgroundX = backgroundX;
+                        appliedBackgroundY = backgroundY;
                         appliedShadow = shadow;
                         finalFrame = data.Complete;
                         rendered = true;
@@ -800,6 +809,7 @@ public sealed class AppController : IDisposable
         if (e.PropertyName is not (nameof(MainWindowState.Status) or nameof(MainWindowState.Progress)
             or nameof(MainWindowState.UseBackground) or nameof(MainWindowState.BackgroundPath)
             or nameof(MainWindowState.BackgroundOpacityPercent) or nameof(MainWindowState.ThemeId) or nameof(MainWindowState.ShadowEnabled)
+            or nameof(MainWindowState.BackgroundPositionXPercent) or nameof(MainWindowState.BackgroundPositionYPercent)
             or nameof(MainWindowState.ShadowBlurPixels) or nameof(MainWindowState.ShadowAngleDegrees)
             or nameof(MainWindowState.ShadowDistancePixels) or nameof(MainWindowState.ShadowOpacityPercent)))
             Interlocked.Increment(ref version);

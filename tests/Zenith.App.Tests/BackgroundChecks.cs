@@ -46,19 +46,20 @@ internal static class BackgroundChecks
                     BGImage = path, BGOpacity = 1 };
                 using var scene = new SceneRenderer(midi, settings, script: script);
                 byte[] original = scene.Render(0);
-                // These low RGB values avoid the original postshader's clamp:
-                // its compensated 100% background writes RGB unchanged and A
-                // equal to PNG alpha. This is an independent numeric oracle.
-                Check(Math.Abs(original[2] - 80) <= 1 && Math.Abs(original[3] - alpha) <= 1,
-                    "100% background must preserve the existing PNG/postshader behavior");
+                // Scripted now uses standard premultiplied composition: source
+                // PNG color is multiplied by its own alpha and global opacity.
+                // The separate direct-post tests retain the builtin legacy oracle.
+                double pngAlpha = alpha / 255d;
+                Check(Math.Abs(original[2] - 80 * pngAlpha) <= 1 && Math.Abs(original[3] - alpha) <= 1,
+                    "Scripted background at 100% must premultiply PNG RGB by its alpha exactly once");
                 long renderCount = scene.LastNoteCount;
                 foreach (double opacity in new[] { 0, .5, 1 })
                 {
                     scene.UpdateBackground(path, opacity);
                     var preview = scene.Recompose();
-                    Check(Math.Abs(preview[2] - 80 * opacity) <= 2 && Math.Abs(preview[1] - 40 * opacity) <= 2
-                        && Math.Abs(preview[0] - 20 * opacity) <= 2 && Math.Abs(preview[3] - alpha * opacity) <= 2,
-                        $"PNG alpha {alpha}, SSAA {ssaa}, opacity {opacity}: background RGB and alpha must scale once");
+                    Check(Math.Abs(preview[2] - 80 * pngAlpha * opacity) <= 2 && Math.Abs(preview[1] - 40 * pngAlpha * opacity) <= 2
+                        && Math.Abs(preview[0] - 20 * pngAlpha * opacity) <= 2 && Math.Abs(preview[3] - alpha * opacity) <= 2,
+                        $"Scripted PNG alpha {alpha}, SSAA {ssaa}, opacity {opacity}: RGB must be premultiplied by PNG alpha and opacity once");
                     settings.ffRender = true;
                     var export = scene.Recompose();
                     Check(export.SequenceEqual(preview), "Preview and ordinary export must use identical background opacity");
@@ -111,7 +112,101 @@ internal static class BackgroundChecks
                 Check(scene.LastNoteCount == renderCount && GL.GetError() == ErrorCode.NoError,
                     "Hot background edits must retain script state and release resources without GL errors");
             }
-            Console.WriteLine($"PASS {count} native background checks: 0/50/100%, PNG alpha, SSAA, preview/export/mask, pure recomposition, cached toggles and failed replacement.");
+
+            // Independent source-coordinate oracles for cover: square images
+            // lose top/bottom rows on a landscape frame; very wide images lose
+            // left/right columns. Each ramp encodes its original x/y position.
+            var cases = new[]
+            {
+                (Name: "square", Width: 8, Height: 8, OutputWidth: 4, OutputHeight: 2, StartX: .5, StartY: .5, CropX: 0d, CropY: 4d, Step: 2d),
+                (Name: "wide", Width: 16, Height: 4, OutputWidth: 4, OutputHeight: 4, StartX: 0d, StartY: 0d, CropX: 12d, CropY: 0d, Step: 1d),
+                (Name: "portrait", Width: 4, Height: 12, OutputWidth: 4, OutputHeight: 2, StartX: 0d, StartY: 0d, CropX: 0d, CropY: 10d, Step: 1d),
+                (Name: "same-ratio", Width: 8, Height: 4, OutputWidth: 4, OutputHeight: 2, StartX: .5, StartY: .5, CropX: 0d, CropY: 0d, Step: 2d)
+            };
+            foreach (var item in cases)
+            foreach (int ssaa in new[] { 1, 2 })
+            {
+                byte[] pixels = new byte[item.Width * item.Height * 4];
+                for (int y = 0; y < item.Height; y++)
+                for (int x = 0; x < item.Width; x++)
+                {
+                    int i = (y * item.Width + x) * 4;
+                    pixels[i] = (byte)(10 + 4 * x);
+                    pixels[i + 1] = (byte)(20 + 5 * y);
+                    pixels[i + 2] = (byte)(20 + 3 * x + 2 * y);
+                    pixels[i + 3] = 128;
+                }
+                string path = Path.Combine(folder, item.Name + ".png");
+                SceneRenderer.SavePng(path, pixels, item.Width, item.Height);
+                var settings = new RenderSettings
+                {
+                    width = item.OutputWidth * ssaa, height = item.OutputHeight * ssaa, downscale = ssaa,
+                    BGImage = path, BGOpacity = .5, BGPositionX = .5, BGPositionY = .5
+                };
+                using var scene = new SceneRenderer(midi, settings, script: script);
+                var centered = scene.Render(0);
+                long renderCount = scene.LastNoteCount;
+                var processor = (ScenePostProcessor)typeof(SceneRenderer).GetField("postProcessor", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(scene)!;
+                var textureField = typeof(ScenePostProcessor).GetField("background", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                int texture = (int)textureField.GetValue(processor)!;
+                foreach (double position in new[] { .5, 0, 1, .5 })
+                {
+                    scene.UpdateBackground(path, .5, position, position);
+                    byte[] result = scene.Recompose();
+                    bool correct = true;
+                    for (int y = 0; y < item.OutputHeight; y++)
+                    for (int x = 0; x < item.OutputWidth; x++)
+                    {
+                        double sourceX = item.StartX + item.CropX * position + item.Step * x;
+                        double sourceY = item.StartY + item.CropY * position + item.Step * y;
+                        int i = (y * item.OutputWidth + x) * 4;
+                        const double coverage = 128d / 255 * .5;
+                        correct &= Math.Abs(result[i] - (10 + 4 * sourceX) * coverage) <= 2
+                            && Math.Abs(result[i + 1] - (20 + 5 * sourceY) * coverage) <= 2
+                            && Math.Abs(result[i + 2] - (20 + 3 * sourceX + 2 * sourceY) * coverage) <= 2
+                            && Math.Abs(result[i + 3] - 64) <= 1;
+                    }
+                    Check(correct, $"Scripted {item.Name}, SSAA {ssaa}, position {position}: cover must retain aspect ratio, correct left/top origin and premultiplied PNG coverage");
+                    Check((int)textureField.GetValue(processor)! == texture && scene.LastNoteCount == renderCount,
+                        "Moving a paused background must reuse its texture and leave the original foreground state untouched");
+                    Check(settings.BGPositionX == position && settings.BGPositionY == position,
+                        "The renderer must retain the current crop position in its live settings");
+                    settings.ffRender = true;
+                    Check(scene.Recompose().SequenceEqual(result), "Cover framing must be identical in preview and normal export");
+                    settings.ffRenderMask = true;
+                    byte[] mask = scene.Recompose();
+                    Check(Enumerable.Range(0, result.Length).Where(i => i % 4 != 3)
+                        .All(i => Math.Abs(mask[i] * mask[i / 4 * 4 + 3] / 255d - result[i]) <= 2)
+                        && Enumerable.Range(0, result.Length / 4).All(i => Math.Abs(mask[i * 4 + 3] - 64) <= 1),
+                        "Positioned background color and alpha must reconstruct consistently from mask export");
+                    settings.ffRender = settings.ffRenderMask = false;
+                    scene.UpdateShadow(ForegroundShadowOptions.Default with { Enabled = true });
+                    byte[] withShadow = scene.Recompose();
+                    Check(withShadow.Zip(result).All(pair => Math.Abs(pair.First - pair.Second) <= 1),
+                        "Foreground shadow composition must not shift or change the cropped background");
+                    scene.UpdateShadow(ForegroundShadowOptions.Default);
+                    if (position == .5)
+                        Check(scene.Recompose().SequenceEqual(centered), "Centered cover must return to exact initial pixels");
+                }
+                scene.UpdateBackground(path, 1, 0, 1);
+                scene.UpdateBackground(null, .5);
+                scene.UpdateBackground(path, .5);
+                Check(settings.BGPositionX == 0 && settings.BGPositionY == 1
+                    && (int)textureField.GetValue(processor)! == texture,
+                    "Legacy opacity/toggle calls must preserve the selected crop and cached texture");
+                byte[] beforeInvalid = scene.Recompose();
+                foreach (double invalid in new[] { -.01, 1.01, double.NaN, double.PositiveInfinity })
+                {
+                    try { scene.UpdateBackground(path, .5, invalid, .5); throw new Exception("Invalid X crop was accepted"); }
+                    catch (ArgumentOutOfRangeException) { }
+                    try { scene.UpdateBackground(path, .5, .5, invalid); throw new Exception("Invalid Y crop was accepted"); }
+                    catch (ArgumentOutOfRangeException) { }
+                }
+                Check(scene.Recompose().SequenceEqual(beforeInvalid) && scene.LastNoteCount == renderCount,
+                    "Invalid crop positions must leave the valid paused frame and script unchanged");
+                Check(GL.GetError() == ErrorCode.NoError, "Cover composition must not leak OpenGL errors");
+            }
+            Console.WriteLine($"PASS {count} native background checks: opacity/PNG alpha, aspect-preserving cover, crop direction/position, SSAA, preview/export/mask/shadow, pure recomposition, cached toggles and failed replacement.");
         }
         finally { Directory.Delete(folder, true); }
     }

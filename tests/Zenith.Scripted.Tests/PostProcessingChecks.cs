@@ -53,7 +53,11 @@ internal static class PostProcessingChecks
                 for (var x = 0; x < width; x++)
                 {
                     double u = (x + .5) / width, v = 1 - (y + .5) / height;
-                    var bg = withBackground ? Post(Sample(background, 2, 2, u, 1 - v, repeat: false)) : new double[4];
+                    // User-requested cover framing: this square background is
+                    // cropped to its middle 2/3 vertically in a 3:2 frame.
+                    // The original alpha/compositing oracle stays unchanged.
+                    var bg = withBackground ? Post(Sample(background, 2, 2, u,
+                        1d / 6 + (1 - v) * 2 / 3, repeat: false)) : new double[4];
                     var foreground = new double[4];
                     for (var i = 0; i < factor; i++)
                     for (var j = 0; j < factor; j++)
@@ -108,16 +112,16 @@ internal static class PostProcessingChecks
             var normal = scene.Render(0);
             settings.ffRenderMask = true;
             var mask = scene.Render(0);
-            assert(Math.Abs(normal[2] - (factor == 1 ? 51 : 26)) <= 2,
-                "Scene applies original SSAA alpha multiplication instead of Skia resizing");
-            assert(Math.Abs(normal[3] - (factor == 1 ? 128 : 64)) <= 2,
-                "Original SSAA squares alpha through standard source-alpha blending");
+            assert(Math.Abs(normal[2] - 51) <= 2,
+                "Corrected Scripted Scene preserves premultiplied RGB at every SSAA factor without another alpha multiplication");
+            assert(Math.Abs(normal[3] - 128) <= 2,
+                "Corrected Scripted Scene preserves true 50% coverage while resolving SSAA");
             assert(Math.Abs(mask[2] - 102) <= 3 && mask[3] == normal[3],
                 "Mask export transports unpremultiplied video RGB and separate mask gray value");
             settings.ffRender = false;
             assert(scene.Render(0).AsSpan().SequenceEqual(normal), "Preview ignores stale ffRenderMask flag");
         }
-        Console.WriteLine("PASS native CGL terminal pipeline: original alpha compensation, SSAA 1/2/3 sampling and wrap, transparent background/flip, mask color/alpha, Scene export flags");
+        Console.WriteLine("PASS native CGL terminal pipeline: legacy alpha compensation/SSAA 1/2/3 sampling and wrap, transparent background/flip, mask color/alpha; corrected Scripted Scene coverage and export flags");
     }
 
     static double Quantize(double value) => Math.Round(Math.Clamp(double.IsNaN(value) ? 0 : value, 0, 1) * 255) / 255;

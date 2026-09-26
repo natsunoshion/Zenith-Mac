@@ -27,8 +27,8 @@ cat > "$TASK_APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Zenith</string>
 <key>CFBundleDisplayName</key><string>Zenith</string>
 <key>CFBundleIdentifier</key><string>org.zenithmidi.macos</string>
-<key>CFBundleVersion</key><string>0.1.2</string>
-<key>CFBundleShortVersionString</key><string>0.1.2</string>
+<key>CFBundleVersion</key><string>0.1.3</string>
+<key>CFBundleShortVersionString</key><string>0.1.3</string>
 <key>CFBundleExecutable</key><string>Zenith.Mac</string>
 <key>CFBundleIconFile</key><string>Zenith.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
