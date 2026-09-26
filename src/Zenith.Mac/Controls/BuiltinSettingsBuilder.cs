@@ -167,7 +167,26 @@ internal sealed class BuiltinSettingsBuilder
             else if (control is ItemsControl items) items.Items.Add(c);
             else if (control is ContentControl content) content.Content = c;
         }
-        if (control is TabItem tab && tab.Content is Control childContent) { tab.Content = null; tab.Content = new ScrollViewer { Content = childContent }; }
+        // Keep a finite viewport for palette lists while the settings beside them scroll.
+        if (control is DockPanel paletteDock && element.Elements().Any(e => e.Name.LocalName == "NoteColorPalettePick") && paletteDock.Children.Count == 2)
+        {
+            var content = paletteDock.Children[0]; var palette = paletteDock.Children[1];
+            paletteDock.Children.Clear();
+            var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,184"), ColumnSpacing = 12, Margin = paletteDock.Margin };
+            content.Margin = new Thickness(0, 8, 8, 0); palette.Margin = new Thickness(0); palette.HorizontalAlignment = HorizontalAlignment.Stretch;
+            columns.Children.Add(new ScrollViewer { Content = content, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto });
+            Grid.SetColumn(palette, 1); columns.Children.Add(palette);
+            control = columns;
+        }
+        else if (control is DockPanel sliderDock && sliderDock.Children.Count == 2 && sliderDock.Children[0] is Label && sliderDock.Children[1] is ValueSlider slider)
+        {
+            var label = sliderDock.Children[0]; sliderDock.Children.Clear();
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 10, Margin = sliderDock.Margin };
+            slider.Width = double.NaN; slider.HorizontalAlignment = HorizontalAlignment.Stretch;
+            row.Children.Add(label); Grid.SetColumn(slider, 1); row.Children.Add(slider); control = row;
+        }
+        if (control is TabItem tab && tab.Content is Control childContent && childContent is not Grid)
+        { tab.Content = null; tab.Content = new ScrollViewer { Content = childContent, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto }; }
         WireControl(name, control);
         return control;
     }
@@ -198,6 +217,16 @@ internal sealed class BuiltinSettingsBuilder
                     break;
             }
         }
+        if (control is NumericUpDown number)
+        {
+            number.MinWidth = Math.Max(86, number.MinWidth);
+            if (!double.IsNaN(number.Width)) number.Width = Math.Max(86, number.Width);
+            number.Height = 28;
+        }
+        if (control is TextBox && Attr(element, "Name") == "barColorHex") { control.Width = 90; control.Height = 28; }
+        if (control is ValueSlider && !double.IsNaN(control.Height)) control.Height = Math.Max(28, control.Height);
+        if (module == "miditrail" && control is DockPanel && Attr(element, "DockPanel.Dock") == "Bottom")
+        { control.Height = 28; control.Margin = new Thickness(0, 12, 0, 0); }
     }
     private void Localize(Control control, string property, string text)
     {
@@ -284,8 +313,9 @@ internal sealed class BuiltinSettingsBuilder
         var reload = new Button { Height = 26, Margin = new Thickness(0, 0, 0, 6) }; Localize(reload, "Content", "{DynamicResource palettes_reload}"); DockPanel.SetDock(reload, Dock.Top); dock.Children.Add(reload); reload.Click += (_, _) => ActionRequested?.Invoke("reload-palettes");
         var folder = new Button { Height = 26, Margin = new Thickness(0, 10, 0, 0), FontSize = 12, Padding = new Thickness(5, 0) }; Localize(folder, "Content", "{DynamicResource palettes_openFolder}"); DockPanel.SetDock(folder, Dock.Bottom); dock.Children.Add(folder); folder.Click += async (_, _) => await OpenFolder(PaletteService.PaletteDirectory);
         var editRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), Margin = new Thickness(0, 10, 0, 0) };
-        var create = new Button { Content = "New Palette…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(0, 0, 3, 0) };
-        var edit = new Button { Content = "Edit Palette…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(3, 0, 0, 0) };
+        var create = new Button { Content = "New…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(0, 0, 3, 0) };
+        var edit = new Button { Content = "Edit…", Height = 26, FontSize = 12, Padding = new Thickness(3, 0), Margin = new Thickness(3, 0, 0, 0) };
+        ToolTip.SetTip(create, "New palette"); ToolTip.SetTip(edit, "Edit selected palette");
         create.Click += (_, _) => ActionRequested?.Invoke("new-palette");
         edit.Click += (_, _) => ActionRequested?.Invoke("edit-palette");
         editRow.Children.Add(create); Grid.SetColumn(edit, 1); editRow.Children.Add(edit);

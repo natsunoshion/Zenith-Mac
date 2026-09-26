@@ -17,3 +17,20 @@ Runtime dependencies retain their upstream licenses: Avalonia (MIT), OpenTK (MIT
 SkiaSharp (MIT; native Skia BSD), Microsoft.CodeAnalysis (MIT), Newtonsoft.Json (MIT),
 SharpCompress (MIT). .NET runtime license files are included by self-contained publishing.
 FFmpeg is an external executable, used under the license of the installed build.
+
+## Interface color palettes
+
+The selectable interface themes adapt these projects' published color palettes
+to Zenith's controls; they are not official ports endorsed by those projects.
+Sage Light is a custom palette for this application.
+
+- Nord Light / Nord Dark: [Nord](https://www.nordtheme.com/),
+  Copyright (c) 2016-present Sven Greb. [MIT license](licenses/Nord-MIT.txt).
+- Catppuccin Latte / Mocha: [Catppuccin](https://catppuccin.com/palette/),
+  Copyright (c) 2021 Catppuccin. [MIT license](licenses/Catppuccin-MIT.txt).
+- Solarized Light: [Solarized](https://ethanschoonover.com/solarized/),
+  Copyright (c) 2011 Ethan Schoonover. [MIT license](licenses/Solarized-MIT.txt).
+
+These themes affect application controls, not the original skins, MIDI palette
+images, exported frames, or reference artwork. The theme license notices are
+also included in the packaged application's Resources/licenses directory.

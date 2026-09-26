@@ -28,13 +28,13 @@ public sealed class ValueSlider : UserControl
     public event Action<double>? ValueChanged;
     private readonly Slider slider = new()
     {
-        Height = 14, MinHeight = 14, VerticalAlignment = VerticalAlignment.Bottom,
-        Margin = new Thickness(0, 0, 0, 3)
+        Height = 26, MinHeight = 14, VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(0)
     };
     private readonly NumericUpDown number = new()
     {
-        MinWidth = 80, Height = 26, HorizontalAlignment = HorizontalAlignment.Left,
-        Margin = new Thickness(5, 0, 0, 0)
+        MinWidth = 86, Height = 28, HorizontalAlignment = HorizontalAlignment.Left,
+        Margin = new Thickness(10, 0, 0, 0)
     };
     private bool updating;
     public ValueSlider()

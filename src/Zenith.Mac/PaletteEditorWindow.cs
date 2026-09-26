@@ -15,7 +15,7 @@ public sealed class PaletteEditorWindow : Window
 {
     readonly PaletteDocument document;
     readonly TextBox nameBox = new() { Name = "PaletteName", MinWidth = 260, HorizontalAlignment = HorizontalAlignment.Stretch };
-    readonly TextBlock error = new() { Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap };
+    readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap };
     readonly TextBlock selectedLabel = new() { FontSize = 16 };
     readonly TextBlock rowCount = new();
     readonly NumericUpDown rowNumber = new() { Name = "PaletteRow", Minimum = 1, Value = 1, Increment = 1, FormatString = "0", Width = 75 };
@@ -40,8 +40,12 @@ public sealed class PaletteEditorWindow : Window
     int row, channel, side;
     bool refreshing, validHex = true;
 
-    public static Task<string?> ShowEditor(Window owner, string? existingName = null) =>
-        new PaletteEditorWindow(existingName).ShowDialog<string?>(owner);
+    public static Task<string?> ShowEditor(Window owner, string? existingName = null)
+    {
+        var editor = new PaletteEditorWindow(existingName);
+        ThemeManager.Inherit(editor, owner);
+        return editor.ShowDialog<string?>(owner);
+    }
 
     public PaletteEditorWindow(string? existingName = null)
     {
@@ -49,8 +53,8 @@ public sealed class PaletteEditorWindow : Window
         Width = 940; Height = 670; MinWidth = 900; MinHeight = 630;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         SystemDecorations = SystemDecorations.Full;
-        RequestedThemeVariant = ThemeVariant.Dark;
-        Background = new SolidColorBrush(Color.Parse("#171717"));
+        ThemeManager.Apply(this, "sage");
+        ThemeManager.BindBrush(error, TextBlock.ForegroundProperty, "Warning");
         Styles.Add(new StyleInclude(new Uri("avares://Zenith.Mac/"))
         { Source = new Uri("avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml") });
         // This editor uses only the spectrum page; omit its redundant mode tab.
@@ -79,6 +83,7 @@ public sealed class PaletteEditorWindow : Window
         }
         nameBox.Text = existingName == null ? PaletteDocument.SuggestName("Custom Palette")
             : PaletteDocument.IsProtectedName(existingName) ? PaletteDocument.SuggestName(existingName + " Custom") : existingName;
+        save.Classes.Add("primary");
         Content = BuildContent(existingName != null && PaletteDocument.IsProtectedName(existingName));
         gradients.IsChecked = document.UseGradients;
         gradients.IsCheckedChanged += async (_, _) => await ChangeGradientMode();
@@ -103,11 +108,12 @@ public sealed class PaletteEditorWindow : Window
         var naming = new Grid { ColumnDefinitions = new("Auto,*,Auto"), ColumnSpacing = 12 };
         naming.Children.Add(new Label { Content = "Palette name" });
         Grid.SetColumn(nameBox, 1); naming.Children.Add(nameBox);
-        var mode = new TextBlock { Text = "Custom colors", Foreground = Brushes.Gray }; Grid.SetColumn(mode, 2); naming.Children.Add(mode);
+        var mode = new TextBlock { Text = "Custom colors" }; ThemeManager.BindBrush(mode, TextBlock.ForegroundProperty, "MutedText"); Grid.SetColumn(mode, 2); naming.Children.Add(mode);
         outer.Children.Add(naming);
         var hint = new TextBlock { Text = (builtIn ? "This built-in palette is saved as a custom copy. " : "")
             + "Randomise color order remains unchanged. Turn it off in the palette sidebar for fixed track / channel slots.",
-            TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brushes.LightGray };
+            TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+        ThemeManager.BindBrush(hint, TextBlock.ForegroundProperty, "MutedText");
         Grid.SetRow(hint, 1); outer.Children.Add(hint);
         var columns = new Grid { ColumnDefinitions = new("*,350"), ColumnSpacing = 24 };
         Grid.SetRow(columns, 2); outer.Children.Add(columns);
@@ -127,7 +133,8 @@ public sealed class PaletteEditorWindow : Window
             swatches[i] = new PaletteSwatch { Height = 30, HorizontalAlignment = HorizontalAlignment.Stretch };
             content.Children.Add(swatches[i]);
             swatchButtons[i] = new Button { Name = "Channel" + (i + 1), Content = content, Background = Brushes.Transparent,
-                BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(2), Padding = new Thickness(5), Margin = new Thickness(0, 0, 6, 6), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+                BorderThickness = new Thickness(2), Padding = new Thickness(5), Margin = new Thickness(0, 0, 6, 6), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            swatchButtons[i].Classes.Add("palette-swatch");
             swatchButtons[i].Click += (_, _) => { channel = index; Refresh(); };
             colors.Children.Add(swatchButtons[i]);
         }
@@ -153,7 +160,8 @@ public sealed class PaletteEditorWindow : Window
         }
         editor.Children.Add(rgba);
         var hex = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 }; hex.Children.Add(new Label { Content = "Hex" }); hex.Children.Add(hexBox); editor.Children.Add(hex);
-        editor.Children.Add(new TextBlock { Text = "#RRGGBBAA · alpha 0 = transparent, 255 = opaque", FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray });
+        var hexHint = new TextBlock { Text = "#RRGGBBAA · alpha 0 = transparent, 255 = opaque", FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        ThemeManager.BindBrush(hexHint, TextBlock.ForegroundProperty, "MutedText"); editor.Children.Add(hexHint);
         var colorScroll = new ScrollViewer { Content = editor, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; Grid.SetColumn(colorScroll, 1); columns.Children.Add(colorScroll);
         Grid.SetRow(error, 3); outer.Children.Add(error);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10 };
@@ -174,7 +182,7 @@ public sealed class PaletteEditorWindow : Window
             for (int i = 0; i < 16; i++)
             {
                 swatches[i].Left = ToColor(document.GetColor(row, i, 0)); swatches[i].Right = ToColor(document.GetColor(row, i, 1)); swatches[i].InvalidateVisual();
-                swatchButtons[i].BorderBrush = i == channel ? new SolidColorBrush(Color.Parse("#43A047")) : Brushes.Transparent;
+                swatchButtons[i].Classes.Set("selected", i == channel);
             }
         }
         finally { refreshing = false; }
@@ -223,11 +231,14 @@ public sealed class PaletteEditorWindow : Window
     }
     async Task<bool> Confirm(string title, string text, string action)
     {
-        var dialog = new Window { Title = title, Width = 430, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner, SystemDecorations = SystemDecorations.Full, RequestedThemeVariant = ThemeVariant.Dark };
+        var dialog = new Window { Title = title, Width = 430, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner, SystemDecorations = SystemDecorations.Full };
+        dialog.Styles.Add(new StyleInclude(new Uri("avares://Zenith.Mac/")) { Source = new Uri("avares://Zenith.Mac/Styles/ZenithTheme.axaml") });
+        ThemeManager.Inherit(dialog, this);
         var panel = new StackPanel { Margin = new Thickness(20), Spacing = 18 };
         panel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap });
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10 };
         var cancel = new Button { Content = "Cancel", IsCancel = true }; var accept = new Button { Content = action };
+        accept.Classes.Add("primary");
         cancel.Click += (_, _) => dialog.Close(false); accept.Click += (_, _) => dialog.Close(true);
         buttons.Children.Add(cancel); buttons.Children.Add(accept); panel.Children.Add(buttons); dialog.Content = panel;
         return await dialog.ShowDialog<bool>(this);

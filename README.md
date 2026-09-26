@@ -43,21 +43,25 @@ dotnet run --project src/Zenith.Mac
 ## 实现范围
 
 - 复用原 Classic / Flat / PFA / MIDITrail / Textured / Note Counter 渲染算法和着色器；在 macOS 原生 CGL OpenGL 4.1 上运行。
-- 按原 General / Modules / Module Settings / Render 四页结构实现界面、深色主题、绿色控件和多语言字典。内置模块设置布局由原 XAML 定义转换；仍在对照 Windows 原版调整控件尺寸、间距和颜色。
+- 保留 General / Modules / Module Settings / Render 四页结构和多语言字典，采用圆角控件和分区布局。General 的 **Theme** 可切换六套浅色／深色主题并保存选择，默认浅石灰＋鼠尾草绿；主题仅改变界面，保留 MIDI、皮肤和导出画面的颜色。内置模块设置由原 XAML 定义转换，脚本设置仍由皮肤生成。方案与来源见 [界面主题](docs/THEMES.md)。
+- 背景图片支持 0–100% 不透明度；预览中调整开关、图片和不透明度会直接更新背景，保留播放位置、暂停状态和粒子状态。100% 保持原有合成结果，50% 可在黑底上减淡背景；导出使用开始时的背景设置。
+- General 提供 **Drop shadow**：调整黑色投影的模糊度、方向、距离和不透明度，预览可实时修改，导出遮罩包含柔和阴影。它基于整个皮肤前景的透明轮廓；关闭皮肤自带的不透明背景即可显露音符投影。使用方法见 [背景与阴影](docs/BACKGROUND_EFFECTS.md)。
 - 原 `.zrp` AES/ZIP 解码、C# 运行时编译、纹理、文字、四顶点颜色/UV、三种纹理着色器、两种混合模式、粒子、可变 Note 元数据、生命周期和动态 UI。
 - 已验证的原 `Synthesia X.zrp` 加载 88 张纹理、2 种字体、306 项设置、11 份原配置。也支持原 Example Flat / Textured / Particles；这些资源需从原发布包准备。
 - 调色板选择、随机开关和种子按模块独立保存于运行状态，支持预览热更新；配置与默认值恢复会同步选色和 MIDITrail Aura。调色板位于 `~/Library/Application Support/Zenith-Mac/Palettes`，内置 PNG 仅补充缺失文件，不向应用包写入。内置 Scripted 配置首次合并到同级 `ScriptedProfiles` 用户目录；外部皮肤仍使用相邻 `.profiles.json`。
 - Scripted 右栏及内置模块提供 **New Palette / Edit Palette**：可编辑 16 通道、多行颜色、左右渐变、RGBA 和 Hex，保存后自动选中并热更新，保留原 Random 行为。说明与验证见 [调色板编辑器](docs/PALETTE_EDITOR.md)。
 - MIDI format 0/1、running status、tempo map、SMPTE、重叠音符、跨轨道延音/选择性延音踏板、颜色事件、按时序定位与控制器状态恢复，以及 Apple AudioUnit 实时音源。
-- FFmpeg 离线定帧导出、SSAA、背景图、CRF/码率/自定义参数、外部音频合并、独立 alpha 遮罩、进度与取消。
+- FFmpeg 离线定帧导出、SSAA、背景图、软件 H.264 CRF/码率、Apple 硬件 H.264 码率、自定义参数、外部音频合并、独立 alpha 遮罩、进度与取消。硬件编码是独立选项，不将软件 CRF 值换算成硬件质量参数。
 - macOS 插件发现机制：将面向 `Zenith.Core` 编译、实现 `ZenithEngine.IPluginRender` 的程序集放到资源目录的 `Plugins/Mac`。
+
+导出会将编码写入与下一帧渲染重叠，脚本仍按帧顺序执行。Apple 硬件模式需要当前 FFmpeg 与 Mac 支持 VideoToolbox；无法使用时会显示错误，可手动选择软件模式。实测数据、复现方法与进一步优化方向见 [渲染性能](docs/PERFORMANCE.md)。
 
 ## 与“完全一样”的验收边界
 
 这是实际执行原脚本和原渲染算法的源码移植。**目前不能宣称已经通过 Windows/macOS 整体逐像素、所有行为的 1:1 验收。**
 
 - WPF 与 Avalonia、Windows GDI 与 macOS Skia 的字体栅格化和部分控件度量有差异。
-- 主设置页延续原版控件风格，使用 macOS 原生窗口外框；新增预览播放器采用独立控制栏和圆角按钮。应用图标来自原仓库绿色双箭头。已有默认与最小尺寸的布局、文字居中及部分交互检查，仍未覆盖所有系统缩放和交互状态。
+- 主设置页与预览播放器采用统一的新样式，并保留 macOS 原生窗口外框；界面外观按用户要求独立设计。应用图标来自原仓库绿色双箭头。已有默认与最小尺寸的布局、文字居中及部分交互检查，仍未覆盖所有系统缩放和交互状态。
 - 原 Windows WPF 插件 DLL 无法直接在 macOS 加载；它们需要源代码移植并重新编译。已测试的 Synthesia X 和三个 Example 皮肤按原脚本加载，在编译时映射 OpenTK 3 数学命名空间至 OpenTK 4；这不表示任意第三方脚本及依赖均兼容。
 - MIDI 播放使用 Apple DLS 音源，Windows KDMAPI/系统音源的音色取决于原系统配置；使用相同外部音频进行视频合成可保留该音频。
 - 已参照 Windows 原版 Zenith 2.1.5 检查页面和预览。尚未完成相同 MIDI、相同配置和相同时间的逐帧对照，亦未验证所有第三方插件或极端规模黑 MIDI。
@@ -71,9 +75,12 @@ dotnet run --project src/Zenith.Mac
 
 ```sh
 dotnet run --project tests/Zenith.Core.SelfTest -- --ffmpeg --audio --stress
+# 本机支持 VideoToolbox 时，另加 --videotoolbox 检查硬件编码
 dotnet run --project tests/Zenith.Scripted.Tests
 dotnet run --project tests/Zenith.App.Tests
 dotnet run --project tests/Zenith.App.Tests -- --export  # 增加实际 Flat 尾帧/遮罩编码检查
+dotnet run --project tests/Zenith.App.Tests -- --background
+dotnet run --project tests/Zenith.App.Tests -- --shadow --export
 dotnet run --project tests/Zenith.Preview.Tests -v:quiet # macOS 原生预览交互与生命周期
 dotnet run --project src/Zenith.Cli -- gpu-test tests/fixtures/demo.mid artifacts/gpu
 ```
@@ -82,7 +89,7 @@ dotnet run --project src/Zenith.Cli -- gpu-test tests/fixtures/demo.mid artifact
 
 已有真实 Synthesia X → CGL → FFmpeg 导出验证，覆盖短视频、外部音频和遮罩。另以一份 1,991 音符、289.056 秒的 MIDI 验证默认皮肤：4 秒片段输出 640×360、30 fps、120 帧无音频视频并完整解码通过；该结果不构成 Windows 同配置、同帧对照。
 
-MIDI/音频/导出自检共 38 项通过，包含 100 万音符的合成文件解析、1,000 次区间查询和动态尾帧编码。该压力样例为短音符序列，不代表已经验证百万音符同时可见的渲染负载。另有 34 项预览/导出时序检查及实际 Flat 渲染的 349 帧视频/遮罩验证。自检与完整导出命令见 [核心测试说明](tests/Zenith.Core.SelfTest/README.md)。
+MIDI/音频/导出自检在启用 `--ffmpeg --audio --stress --videotoolbox` 时共 44 项通过，包含 100 万音符的合成文件解析、1,000 次区间查询、动态尾帧、流水线帧顺序/像素一致性及实际硬件编码。该压力样例为短音符序列，不代表已经验证百万音符同时可见的渲染负载。另有 34 项预览/导出时序检查及实际 Flat 渲染的 349 帧视频/遮罩验证。自检与完整导出命令见 [核心测试说明](tests/Zenith.Core.SelfTest/README.md)。
 
 命令行支持 `inspect`、`frame`、`gpu-test` 和 `render`。运行不带参数的 CLI 查看完整语法：
 

@@ -17,6 +17,8 @@ rsync -a --exclude='*.[eE][xX][eE]' --exclude='*.[bB][aA][tT]' --exclude='*.[cC]
   assets/windows/Zenith/ "$TASK_APP/Contents/Resources/Zenith/"
 cp upstream/LICENSE "$TASK_APP/Contents/Resources/UPSTREAM_LICENSE"
 cp THIRD_PARTY_NOTICES.md "$TASK_APP/Contents/Resources/"
+mkdir -p "$TASK_APP/Contents/Resources/licenses"
+cp licenses/* "$TASK_APP/Contents/Resources/licenses/"
 cp src/Zenith.Mac/Assets/Zenith.icns "$TASK_APP/Contents/Resources/$TASK_ICON_FILE"
 cat > "$TASK_APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -25,8 +27,8 @@ cat > "$TASK_APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Zenith</string>
 <key>CFBundleDisplayName</key><string>Zenith</string>
 <key>CFBundleIdentifier</key><string>org.zenithmidi.macos</string>
-<key>CFBundleVersion</key><string>0.1.1</string>
-<key>CFBundleShortVersionString</key><string>0.1.1</string>
+<key>CFBundleVersion</key><string>0.1.2</string>
+<key>CFBundleShortVersionString</key><string>0.1.2</string>
 <key>CFBundleExecutable</key><string>Zenith.Mac</string>
 <key>CFBundleIconFile</key><string>Zenith.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>

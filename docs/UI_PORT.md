@@ -8,9 +8,10 @@ independent of Avalonia; a Flutter frontend would still require new pages,
 dynamic settings controls, and a bridge to the .NET script/render/playback
 runtime. No frontend migration is needed for the alignment and styling fixes.
 
-The Dock icon uses the upstream green double-chevron artwork. The application
-bundle includes `Zenith.icns` and declares `CFBundleIconFile`; the window also
-uses the corresponding embedded PNG. Sources, reproduction and verification
+The application icon uses the upstream green double-chevron artwork. The
+bundle declares a content-hashed ICNS filename in `CFBundleIconFile`, and the
+application sets the native AppKit icon at startup; the window also uses the
+corresponding embedded PNG. Sources, reproduction and verification
 are recorded in `src/Zenith.Mac/Assets/ICON_SOURCE.md` and
 `artifacts/icon-review/verification.txt`.
 
@@ -22,11 +23,15 @@ of `icon.png`. That duplicate resolver has been removed.
 
 ## Layout
 
-The main window follows the upstream 900 × 600 WPF layout, including its 50 px custom title bar, four main pages, colors, number selectors, checkboxes, radio buttons, and logarithmic sliders. Its minimum size is 780 × 550.
+The main window retains the upstream four-page structure and its controls,
+with an independently designed interface and six selectable color themes.
+Sage Light is the default; the preview player retains its independent dark
+controls. Its default size is 900 × 600 and minimum size is 780 × 550. The header
+is 60 px high; grouped settings scroll independently of the primary action bar.
 
 The preview uses a modern, separate playback area below the image, with a
 seekable timeline, time labels and rounded icon buttons. Its styles are isolated
-from the original settings controls. The main status panel occupies its own
+from the dynamically generated settings controls. The main status panel occupies its own
 bottom layout row; preview status never displays the last MIDI-load/export
 progress value. See [Playback controls](PLAYBACK.md).
 
@@ -40,17 +45,48 @@ Writable palettes live in `~/Library/Application Support/Zenith-Mac/Palettes`. M
 
 Scripted's right sidebar and builtin module palette controls provide **New Palette / Edit Palette**. The editor supports 16 channel colors, multiple rows, independent gradient sides, RGBA and Hex input; saving selects the result and updates the preview without changing the original Random behavior. Independent PNG and actual dialog-save checks are recorded in `artifacts/palette-editor-qa/verification.txt`; see [Palette editor](PALETTE_EDITOR.md).
 
-## Current visual corrections
+## Current visual design
 
-Single-line input and numeric text is vertically centered, including the palette name and Hex fields. Numeric spinners use the original green 25×25 button group, 13×5 white chevrons and a 1 px separation; dropdown arrows are green. Default control and popup corner radii are zero, while the original 3 px window buttons and checkboxes retain their upstream shape. Button hover no longer paints twice.
+Main pages use grouped surfaces, theme-specific primary actions and shared
+rounded input, dropdown, list and button styles. Single-line input and numeric
+text remain vertically centered. Compact numeric spinners retain separate up
+and down actions and a visible gap. The title bar has one hover surface per
+button; it does not stack a second Fluent background above that surface.
 
-General restores the original independent resolution columns, background and Tempo row heights, slider geometry and bottom-aligned footer controls. Long audio hints wrap at smaller window sizes. The requested rounded outer window uses the native NSWindow frame through `SystemDecorations="Full"` with the client area extended and `NoChrome`. A CUA desktop screenshot visually confirmed all four native outer corners. That desktop screenshot remains in the current session only; measurements and reviewed client screenshots are stored in `artifacts/alignment-ui-review/`.
+The General footer provides a persistent theme selector. Window-local semantic
+color resources cover main pages, dynamic settings, the palette editor and
+dialogs, including hover and disabled states. Preview and export pixels are
+independent of these resources. Palette sources and theme choices are described
+in [Interface themes](THEMES.md).
 
-The latest checks in `artifacts/ui-refinement-qa/verification.md` cover General
-at 900×600 and 780×550, the palette editor at 940×670 and 900×630, popup corners,
-hover/disabled states, input text geometry and an actual increment event.
-The palette grid and color view were tightened so row actions and Hex/alpha
-controls remain fully visible at the minimum size.
+The main General page groups MIDI loading, resolution, render options,
+background, drop shadow and preview settings. The background path is one line with a
+full-path tooltip. Opacity controls retain their layout when disabled. Toggling
+or changing a background no longer calls Stop/Start: the render worker updates
+its texture and composition settings, and paused edits reuse the existing
+foreground. This avoids footer state changes and preserves script state.
+
+Drop shadow provides blur, direction, distance and opacity controls in two
+responsive columns. It uses the skin foreground's alpha, with pixel units
+measured at the output resolution. The hint explains how to disable an opaque
+skin background; see [Background and drop shadow](BACKGROUND_EFFECTS.md).
+
+Module, resource, palette and export controls use the same visual theme.
+Script-generated rows use flexible label/control columns and wrapped labels;
+tabs can wrap when needed. The Render page retains software bitrate, CRF and
+custom FFmpeg modes and adds a separate Apple hardware H.264 bitrate mode.
+
+The outer window uses the native NSWindow frame through
+`SystemDecorations="Full"` with the client area extended and `NoChrome`.
+Earlier geometry and desktop checks are in `artifacts/alignment-ui-review/`
+and `artifacts/ui-refinement-qa/`; they describe the previous visual theme and
+are not evidence for the new colors or rounded controls.
+
+Current default/minimum-size page and palette snapshots are recorded in
+`artifacts/modern-main-qa/`. Its `final.log` also verifies numeric opacity and
+blur input bindings and mutually exclusive hardware/software encoding modes.
+The subsequent six-theme screenshots and selection/persistence/isolation checks
+are in `artifacts/theme-qa/`; these supersede the earlier fixed dark-green colors.
 
 All supplied language dictionaries are loaded from the original `Languages` directory. The selected language is retained with the other application settings. Plugin settings can also supply a native Avalonia `Control`; custom settings objects without a known layout receive editable controls for their public primitive fields.
 
@@ -69,4 +105,8 @@ This renders the live Avalonia visual tree at 2× resolution, exports the four p
 
 ## Platform differences
 
-The audio switch controls the macOS MIDI synthesizer, so its label says “Audio” instead of the Windows driver name KDMAPI. File pickers are native macOS dialogs. Font rendering can differ: the theme requests Segoe UI, with Arial/Helvetica as fallbacks if Segoe UI is unavailable. These differences mean the interface is not claimed to be pixel identical across operating systems.
+The audio switch controls the macOS MIDI synthesizer, so its label says “Audio”
+instead of the Windows driver name KDMAPI. File pickers are native macOS dialogs.
+The theme requests Inter with Segoe UI and Arial fallbacks. Font rendering can
+differ; the interface is independently styled and is not claimed to be pixel
+identical across operating systems.

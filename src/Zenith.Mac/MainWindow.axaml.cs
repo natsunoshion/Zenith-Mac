@@ -19,6 +19,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
     private readonly List<(object Source, string Property)> scriptValues = new();
     private ScriptedProfiles? scriptProfiles;
     private bool settingItems;
+    private bool settingTheme;
     private bool exportingUiSnapshots;
     private BuiltinSettingsBuilder? builtinBuilder;
     private string selectedLanguage = "en";
@@ -51,6 +53,8 @@ public partial class MainWindow : Window
         foreach (var pair in EnglishResources.Values) Resources[pair.Key] = pair.Value;
         AvaloniaXamlLoader.Load(this);
         DataContext = State;
+        this.FindControl<ComboBox>("ThemeSelect")!.ItemsSource = ThemeManager.Options;
+        ApplyInterfaceTheme();
         this.FindControl<ComboBox>("CrfPresetSelect")!.ItemsSource = new[] { "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow" };
         State.PropertyChanged += (_, e) =>
         {
@@ -58,6 +62,7 @@ public partial class MainWindow : Window
             if (e.PropertyName is nameof(State.Status) or nameof(State.IsBusy) or nameof(State.IsRendering)
                 or nameof(State.IsPreviewing) or nameof(State.Paused)) Dispatcher.UIThread.Post(UpdateStatusVisibility);
             if (e.PropertyName == nameof(State.LanguageCode)) Dispatcher.UIThread.Post(() => LoadLanguage(State.LanguageCode));
+            if (e.PropertyName == nameof(State.ThemeId)) ApplyInterfaceTheme();
         };
         KeyDown += (_, e) => { if (e.Key == Key.Space && e.Source is not TextBox && State.IsPreviewing) { State.Paused = !State.Paused; e.Handled = true; } };
         InitializeAssets(AssetPaths.Root);
@@ -121,6 +126,18 @@ public partial class MainWindow : Window
         settingItems = true;
         this.FindControl<ComboBox>("LanguageSelect")!.SelectedItem = languages.FirstOrDefault(p => p.Value == language).Key;
         settingItems = false;
+    }
+    private void ApplyInterfaceTheme()
+    {
+        if (!Dispatcher.UIThread.CheckAccess()) { Dispatcher.UIThread.Post(ApplyInterfaceTheme); return; }
+        ThemeManager.Apply(this, State.ThemeId);
+        settingTheme = true;
+        try { this.FindControl<ComboBox>("ThemeSelect")!.SelectedItem = ThemeManager.Options.First(t => t.Id == State.ThemeId); }
+        finally { settingTheme = false; }
+    }
+    private void ThemeChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!settingTheme && sender is ComboBox { SelectedItem: ThemeOption option }) State.ThemeId = option.Id;
     }
     private void LanguageChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -221,7 +238,13 @@ public partial class MainWindow : Window
     {
         settingItems = true;
         var items = skins.OrderBy(s => s.Name, StringComparer.Ordinal).ToArray(); var list = this.FindControl<ListBox>("SkinsList")!;
-        list.ItemsSource = items.Select(s => new ListBoxItem { Content = new TextBlock { Text = s.Name, Foreground = s.IsArchive ? Brushes.Green : Brushes.White }, Tag = s.Path }).ToArray();
+        list.ItemsSource = items.Select(s =>
+        {
+            var label = new TextBlock { Text = s.Name, TextTrimming = TextTrimming.CharacterEllipsis };
+            ThemeManager.BindBrush(label, TextBlock.ForegroundProperty, s.IsArchive ? "Success" : "Text");
+            ToolTip.SetTip(label, s.Name);
+            return new ListBoxItem { Content = label, Tag = s.Path };
+        }).ToArray();
         list.SelectedItem = list.Items.Cast<ListBoxItem>().FirstOrDefault(i => (string?)i.Tag == selectedPath);
         settingItems = false;
     }
@@ -242,10 +265,13 @@ public partial class MainWindow : Window
     }
     internal static TextBlock PaletteLabel(string assetRoot, string name)
     {
-        IBrush brush = Brushes.White;
+        var role = "Text";
         var file = Path.Combine(PaletteService.PaletteDirectory, name + ".png");
-        if (File.Exists(file)) { using var image = new Bitmap(file); if (image.PixelSize.Width == 32) brush = Brushes.Blue; }
-        return new TextBlock { Text = name, Foreground = brush };
+        if (File.Exists(file)) { using var image = new Bitmap(file); if (image.PixelSize.Width == 32) role = "Info"; }
+        var label = new TextBlock { Text = name, TextTrimming = TextTrimming.CharacterEllipsis };
+        ThemeManager.BindBrush(label, TextBlock.ForegroundProperty, role);
+        ToolTip.SetTip(label, name);
+        return label;
     }
     private void RandomizePaletteChanged(object? sender, RoutedEventArgs e)
     {
@@ -308,7 +334,7 @@ public partial class MainWindow : Window
             Control control;
             switch (s.GetType().Name)
             {
-                case "UILabel": panel.Children.Add(new Label { Content = label, FontSize = Read(s, "FontSize", 16d), Margin = new Thickness(0, 0, 0, padding) }); continue;
+                case "UILabel": panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, FontSize = Read(s, "FontSize", 16d), Margin = new Thickness(0, 4, 0, padding + 4) }); continue;
                 case "UITabs":
                     var tabs = new TabControl();
                     if (Read<object?>(s, "Tabs") is IDictionary dict)
@@ -325,17 +351,17 @@ public partial class MainWindow : Window
                     Subscribe<double>(s, "ValueChanged", v => number.Value = (decimal)Math.Clamp(v, (double)number.Minimum, (double)number.Maximum));
                     scriptValues.Add((s, "Value")); control = number; break;
                 case "UINumberSlider":
-                    var slider = new ValueSlider { Minimum = Read(s, "Minimum", 0d), Maximum = Read(s, "Maximum", 100d), TrueMinimum = Read(s, "TrueMinimum", 0d), TrueMaximum = Read(s, "TrueMaximum", 100d), Value = Read(s, "Value", 0d), Step = Read(s, "Step", 1d), DecimalPlaces = Read(s, "DecialPoints", 0), Logarithmic = Read(s, "Logarithmic", false), Width = 400 };
+                    var slider = new ValueSlider { Minimum = Read(s, "Minimum", 0d), Maximum = Read(s, "Maximum", 100d), TrueMinimum = Read(s, "TrueMinimum", 0d), TrueMaximum = Read(s, "TrueMaximum", 100d), Value = Read(s, "Value", 0d), Step = Read(s, "Step", 1d), DecimalPlaces = Read(s, "DecialPoints", 0), Logarithmic = Read(s, "Logarithmic", false), HorizontalAlignment = HorizontalAlignment.Stretch };
                     slider.ValueChanged += v => SetScriptValue(s, "Value", v);
                     Subscribe<double>(s, "ValueChanged", v => slider.Value = v);
                     scriptValues.Add((s, "Value")); control = slider; break;
                 case "UIDropdown":
-                    var drop = new ComboBox { ItemsSource = Read(s, "Options", Array.Empty<string>()), SelectedIndex = Read(s, "Index", 0), FontSize = 16, MinWidth = 100 };
+                    var drop = new ComboBox { ItemsSource = Read(s, "Options", Array.Empty<string>()), SelectedIndex = Read(s, "Index", 0), FontSize = 14, MinWidth = 140, HorizontalAlignment = HorizontalAlignment.Left };
                     drop.SelectionChanged += (_, _) => { if (drop.SelectedIndex >= 0) SetScriptValue(s, "Index", drop.SelectedIndex); };
                     Subscribe<int>(s, "IndexChanged", v => drop.SelectedIndex = v);
                     scriptValues.Add((s, "Index")); control = drop; break;
                 case "UICheckbox":
-                    var check = new CheckBox { Content = label, IsChecked = Read(s, "Checked", false), FontSize = 16 };
+                    var check = new CheckBox { Content = label, IsChecked = Read(s, "Checked", false), FontSize = 14 };
                     check.IsCheckedChanged += (_, _) => SetScriptValue(s, "Checked", check.IsChecked == true);
                     Subscribe<bool>(s, "ValueChanged", v => check.IsChecked = v);
                     scriptValues.Add((s, "Checked")); control = check; label = ""; break;
@@ -343,8 +369,13 @@ public partial class MainWindow : Window
             }
             control.IsEnabled = Read(s, "Enabled", true);
             Subscribe<bool>(s, "EnableToggled", value => control.IsEnabled = value);
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, padding) };
-            if (!string.IsNullOrEmpty(label)) { row.Children.Add(new Label { Content = label, FontSize = 16 }); control.Margin = new Thickness(5, 0, 0, 0); }
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions(string.IsNullOrEmpty(label) ? "*" : "210,*"), ColumnSpacing = 12, Margin = new Thickness(0, 0, 0, padding) };
+            if (!string.IsNullOrEmpty(label))
+            {
+                row.Children.Add(new TextBlock { Text = label, FontSize = 14, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
+                Grid.SetColumn(control, 1);
+            }
+            if (control is NumericUpDown) { control.Width = 120; control.HorizontalAlignment = HorizontalAlignment.Left; }
             row.Children.Add(control); panel.Children.Add(row);
         }
     }
@@ -437,21 +468,27 @@ public partial class MainWindow : Window
     }
     public async Task ShowError(string message)
     {
-        var dialog = new Window { Title = "Zenith", Width = 560, SizeToContent = SizeToContent.Height, MaxHeight = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = new SolidColorBrush(Color.Parse("#171717")), Foreground = Brushes.White, CanResize = false };
+        var dialog = new Window { Title = "Zenith", Width = 560, SizeToContent = SizeToContent.Height, MaxHeight = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner, CanResize = false };
+        dialog.Styles.Add(new StyleInclude(new Uri("avares://Zenith.Mac/")) { Source = new Uri("avares://Zenith.Mac/Styles/ZenithTheme.axaml") });
+        ThemeManager.Inherit(dialog, this);
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 18 };
         stack.Children.Add(new TextBox { Text = message, TextWrapping = TextWrapping.Wrap, IsReadOnly = true, MaxHeight = 350, Background = Brushes.Transparent, BorderThickness = new Thickness(0) });
         var button = new Button { Content = "OK", HorizontalAlignment = HorizontalAlignment.Right, MinWidth = 80 };
+        button.Classes.Add("primary");
         button.Click += (_, _) => dialog.Close(); stack.Children.Add(button); dialog.Content = stack;
         await dialog.ShowDialog(this);
     }
     public async Task<bool> ConfirmAsync(string message)
     {
-        var dialog = new Window { Title = "Zenith", Width = 480, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = new SolidColorBrush(Color.Parse("#171717")), Foreground = Brushes.White, CanResize = false };
+        var dialog = new Window { Title = "Zenith", Width = 480, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, CanResize = false };
+        dialog.Styles.Add(new StyleInclude(new Uri("avares://Zenith.Mac/")) { Source = new Uri("avares://Zenith.Mac/Styles/ZenithTheme.axaml") });
+        ThemeManager.Inherit(dialog, this);
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 18 };
         stack.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10 };
         var yes = new Button { Content = "Yes", MinWidth = 80 };
         var no = new Button { Content = "No", MinWidth = 80 };
+        yes.Classes.Add("primary");
         yes.Click += (_, _) => dialog.Close(true); no.Click += (_, _) => dialog.Close(false);
         buttons.Children.Add(yes); buttons.Children.Add(no); stack.Children.Add(buttons); dialog.Content = stack;
         return await dialog.ShowDialog<bool>(this);

@@ -1,180 +1,137 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:Zenith.Mac" x:Class="Zenith.Mac.MainWindow" Width="900" Height="600" MinWidth="780" MinHeight="550" Title="Zenith" Icon="/Assets/Zenith.png" SystemDecorations="Full" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaChromeHints="NoChrome" ExtendClientAreaTitleBarHeightHint="0" WindowStartupLocation="CenterScreen" RequestedThemeVariant="Dark" x:CompileBindings="False">
-  <Window.Styles>
-    <StyleInclude Source="/Styles/ZenithTheme.axaml"/>
-    <Style Selector="Button.status-action">
-      <Setter Property="Background" Value="#293A2F"/><Setter Property="Foreground" Value="#BDEDCB"/>
-      <Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="12,5"/>
-      <Setter Property="MinHeight" Value="30"/><Setter Property="FontSize" Value="12"/>
-    </Style>
-    <Style Selector="Button.status-action:pointerover"><Setter Property="Background" Value="#365040"/></Style>
-    <Style Selector="Button.status-action:pressed"><Setter Property="Background" Value="#43644F"/></Style>
-  </Window.Styles>
-  <Grid RowDefinitions="50,*,Auto">
-    <Border Background="#11FFFFFF" PointerPressed="TitleBarPointerPressed">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-        <Image x:Name="AppLogo" Width="30" Height="30" Margin="10"/>
-        <TextBlock Grid.Column="1" Text="{Binding VersionName}" FontSize="20" Padding="5" Margin="-5,0,10,0"/>
-        <StackPanel Grid.Column="2" Orientation="Horizontal">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:Zenith.Mac" x:Class="Zenith.Mac.MainWindow" Width="900" Height="600" MinWidth="780" MinHeight="550" Title="Zenith" Icon="/Assets/Zenith.png" SystemDecorations="Full" ExtendClientAreaToDecorationsHint="True" ExtendClientAreaChromeHints="NoChrome" ExtendClientAreaTitleBarHeightHint="0" WindowStartupLocation="CenterScreen" x:CompileBindings="False">
+  <Window.Styles><StyleInclude Source="/Styles/ZenithTheme.axaml"/></Window.Styles>
+  <Grid RowDefinitions="60,*,Auto">
+    <Border Background="{DynamicResource ZenithHeaderBrush}" BorderBrush="{DynamicResource ZenithBorderBrush}" BorderThickness="0,0,0,1" PointerPressed="TitleBarPointerPressed">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="16,0">
+        <Image x:Name="AppLogo" Width="28" Height="28" Margin="0,0,10,0"/>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,22,0"><TextBlock Text="Zenith" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="{Binding VersionName}" FontSize="10" Foreground="{DynamicResource ZenithMutedTextBrush}"/></StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
           <Button x:Name="GeneralTab" Classes="nav active" Content="{DynamicResource generalTab}" Tag="0" Click="SelectMainPage" IsEnabled="{Binding NotRendering}"/>
           <Button x:Name="ModulesTab" Classes="nav" Content="{DynamicResource modulesTab}" Tag="1" Click="SelectMainPage" IsEnabled="{Binding NotRendering}"/>
           <Button x:Name="ModuleSettingsTab" Classes="nav" Content="{DynamicResource moduleSettingsTab}" Tag="2" Click="SelectMainPage" IsEnabled="{Binding NotRendering}"/>
           <Button x:Name="RenderTab" Classes="nav" Content="{DynamicResource renderTab}" Tag="3" Click="SelectMainPage"/>
         </StackPanel>
-        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" Spacing="6">
-          <Button Classes="window" Background="Orange" Click="MinimizeClick" ToolTip.Tip="Minimize"/>
-          <Button Classes="window" Background="Red" Click="CloseClick" ToolTip.Tip="Close"/>
+        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+          <Button Classes="window" Content="−" Click="MinimizeClick" ToolTip.Tip="Minimize"/>
+          <Button Classes="window close" Content="×" Click="CloseClick" ToolTip.Tip="Close"/>
         </StackPanel>
       </Grid>
     </Border>
     <Grid Grid.Row="1" x:Name="GeneralPage" RowDefinitions="*,Auto">
-      <ScrollViewer>
-        <StackPanel>
-          <Grid ColumnDefinitions="*,*" Height="30" Margin="10">
-            <Button Margin="0,0,3,0" Padding="30,0" Content="{DynamicResource load}" Tag="load" Click="ActionClick" IsEnabled="{Binding CanLoad}"/>
-            <Button Grid.Column="1" Margin="3,0,0,0" Padding="20,0" Content="{DynamicResource unload}" Tag="unload" Click="ActionClick" IsEnabled="{Binding CanUnload}"/>
+      <ScrollViewer><StackPanel Margin="16,16,16,12" Spacing="12">
+        <Border Classes="card"><Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="4"><TextBlock Text="MIDI source" Classes="section-title"/><TextBlock Text="{Binding MidiPath}" Foreground="{DynamicResource ZenithMutedTextBrush}" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MidiPath}" MinHeight="16"/></StackPanel>
+          <Button Grid.Column="1" Classes="primary" Content="{DynamicResource load}" Tag="load" Click="ActionClick" IsEnabled="{Binding CanLoad}" MinWidth="92" VerticalAlignment="Center"/>
+          <Button Grid.Column="2" Content="{DynamicResource unload}" Tag="unload" Click="ActionClick" IsEnabled="{Binding CanUnload}" MinWidth="82" VerticalAlignment="Center"/>
+        </Grid></Border>
+        <Grid ColumnDefinitions="1.2*,*" ColumnSpacing="12">
+          <Border Classes="card"><StackPanel Spacing="10">
+            <TextBlock Text="{DynamicResource renderResolution}" Classes="section-title"/>
+            <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="30,30" ColumnSpacing="10" RowSpacing="8">
+              <Label Content="{DynamicResource width}"/><NumericUpDown Grid.Column="1" Value="{Binding Width}" Minimum="1" Maximum="15360" IsEnabled="{Binding CanEdit}"/>
+              <Label Grid.Column="2" Content="{DynamicResource presets}"/><ComboBox Grid.Column="3" SelectedIndex="{Binding ResolutionPreset}" HorizontalAlignment="Stretch" IsEnabled="{Binding CanEdit}"><ComboBoxItem Content="720p"/><ComboBoxItem Content="1080p"/><ComboBoxItem Content="1440p"/><ComboBoxItem Content="4k"/><ComboBoxItem Content="5k"/><ComboBoxItem Content="8k"/><ComboBoxItem Content="16k"/></ComboBox>
+              <Label Grid.Row="1" Content="{DynamicResource height}"/><NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Height}" Minimum="1" Maximum="8640" IsEnabled="{Binding CanEdit}"/>
+              <Label Grid.Row="1" Grid.Column="2" Content="{DynamicResource superRes}"/><NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding Ssaa}" Minimum="1" Maximum="4" IsEnabled="{Binding CanEdit}"/>
+            </Grid>
+            <TextBlock Text="{DynamicResource zenithRenderWarning}" Classes="hint" TextWrapping="Wrap"/>
+          </StackPanel></Border>
+          <Border Grid.Column="1" Classes="card"><StackPanel Spacing="10">
+            <TextBlock Text="{DynamicResource renderOptions}" Classes="section-title"/>
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="30,30" ColumnSpacing="10" RowSpacing="8"><Label Content="{DynamicResource fps}"/><NumericUpDown Grid.Column="1" Value="{Binding Fps}" Minimum="1" Maximum="1000" IsEnabled="{Binding CanEdit}"/><Label Grid.Row="1" Content="{DynamicResource noteSize}"/><ComboBox Grid.Row="1" Grid.Column="1" SelectedIndex="{Binding NoteSizeStyle}" HorizontalAlignment="Stretch" IsEnabled="{Binding CanEdit}"><ComboBoxItem Content="{DynamicResource tickBased}"/><ComboBoxItem Content="{DynamicResource timeBased}"/></ComboBox></Grid>
+            <CheckBox Content="{DynamicResource ignoreColorEvents}" IsChecked="{Binding IgnoreColorEvents}"/>
+            <TextBlock Text="{DynamicResource superResWarning}" Classes="hint" TextWrapping="Wrap"/>
+          </StackPanel></Border>
+        </Grid>
+        <Border Classes="card" IsEnabled="{Binding NotRendering}"><StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <CheckBox Content="{DynamicResource useBackgroundImage}" IsChecked="{Binding UseBackground}"/>
+            <TextBox Grid.Column="1" Text="{Binding BackgroundPath}" TextWrapping="NoWrap" Height="30" IsReadOnly="True" Watermark="Choose a background image" ToolTip.Tip="{Binding BackgroundPath}"/>
+            <Button Grid.Column="2" Content="{DynamicResource browse}" Tag="browse-background" Click="ActionClick" IsEnabled="{Binding UseBackground}"/>
           </Grid>
-          <StackPanel Margin="10">
-            <Grid ColumnDefinitions="*,*">
-              <StackPanel>
-                <Label FontSize="16" HorizontalAlignment="Center" Content="{DynamicResource renderResolution}"/>
-                <Grid ColumnDefinitions="*,*">
-                  <StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,5">
-                      <Label Content="{DynamicResource width}" VerticalAlignment="Top"/>
-                      <NumericUpDown Value="{Binding Width}" Minimum="1" Maximum="15360" Width="118" Margin="10,0,0,0" IsEnabled="{Binding CanEdit}"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                      <Label Content="{DynamicResource height}"/>
-                      <NumericUpDown Value="{Binding Height}" Minimum="1" Maximum="8640" Width="118" Margin="5,0,0,0" IsEnabled="{Binding CanEdit}"/>
-                    </StackPanel>
-                  </StackPanel>
-                  <StackPanel Grid.Column="1">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,5">
-                      <Label Content="{DynamicResource presets}" VerticalAlignment="Top"/>
-                      <ComboBox SelectedIndex="{Binding ResolutionPreset}" Width="110" Margin="10,0,0,0" IsEnabled="{Binding CanEdit}"><ComboBoxItem Content="720p"/><ComboBoxItem Content="1080p"/><ComboBoxItem Content="1440p"/><ComboBoxItem Content="4k"/><ComboBoxItem Content="5k"/><ComboBoxItem Content="8k"/><ComboBoxItem Content="16k"/></ComboBox>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,5">
-                      <Label Content="{DynamicResource superRes}" VerticalAlignment="Top"/>
-                      <NumericUpDown Value="{Binding Ssaa}" Minimum="1" Maximum="4" Width="118" Margin="20,0,0,0" IsEnabled="{Binding CanEdit}"/>
-                    </StackPanel>
-                  </StackPanel>
-                </Grid>
-              </StackPanel>
-              <StackPanel Grid.Column="1">
-                <Label FontSize="16" HorizontalAlignment="Center" Content="{DynamicResource renderOptions}"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                  <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                    <Label Content="{DynamicResource fps}"/>
-                    <NumericUpDown Value="{Binding Fps}" Minimum="1" Maximum="1000" Width="77" Margin="5,0,0,0" IsEnabled="{Binding CanEdit}"/>
-                  </StackPanel>
-                  <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Margin="20,0,0,0">
-                    <Label Content="{DynamicResource noteSize}" VerticalAlignment="Top"/>
-                    <ComboBox SelectedIndex="{Binding NoteSizeStyle}" Padding="7,4,10,4" Margin="5,0,0,0" IsEnabled="{Binding CanEdit}"><ComboBoxItem Content="{DynamicResource tickBased}"/><ComboBoxItem Content="{DynamicResource timeBased}"/></ComboBox>
-                  </StackPanel>
-                </StackPanel>
-                <CheckBox Content="{DynamicResource ignoreColorEvents}" IsChecked="{Binding IgnoreColorEvents}" Height="26" HorizontalAlignment="Center"/>
-              </StackPanel>
-            </Grid>
-            <TextBlock Text="{DynamicResource zenithRenderWarning}" TextWrapping="Wrap" Margin="5,5,0,5"/>
-            <TextBlock Text="{DynamicResource superResWarning}" TextWrapping="Wrap" Margin="5,5,0,5"/>
-            <Grid ColumnDefinitions="Auto,Auto,*" Height="26" VerticalAlignment="Top" Margin="0,10,0,20">
-              <CheckBox Content="{DynamicResource useBackgroundImage}" IsChecked="{Binding UseBackground}" MinHeight="0" VerticalAlignment="Top" Margin="0,4,0,0"/>
-              <Button Grid.Column="1" Content="{DynamicResource browse}" Tag="browse-background" Click="ActionClick" Padding="15,1" Margin="5,0,0,0" IsEnabled="{Binding UseBackground}"/>
-              <TextBox Grid.Column="2" Text="{Binding BackgroundPath}" TextWrapping="Wrap" VerticalAlignment="Stretch" Margin="5,0,0,0" IsReadOnly="True"/>
-            </Grid>
-            <Label FontSize="16" HorizontalAlignment="Center" Content="{DynamicResource previewOptions}"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Height="30" Margin="0,0,0,10">
-              <Label Content="{DynamicResource tempo}" VerticalAlignment="Top"/>
-              <local:ValueSlider x:Name="TempoSlider" Width="396" Margin="0,0,0,4" Minimum="0.0625" Maximum="64" TrueMinimum="0.01" TrueMaximum="1000" Value="{Binding TempoMultiplier}" Logarithmic="True" DecimalPlaces="2"/>
-            </StackPanel>
-            <Grid ColumnDefinitions="*,*,*">
-              <CheckBox HorizontalAlignment="Center" Content="{DynamicResource vsync}" IsChecked="{Binding Vsync}"/>
-              <CheckBox Grid.Column="1" HorizontalAlignment="Center" Content="{DynamicResource paused}" IsChecked="{Binding Paused}"/>
-              <CheckBox Grid.Column="2" HorizontalAlignment="Center" Content="{DynamicResource realtimePlayback}" IsChecked="{Binding RealtimePlayback}"/>
-            </Grid>
-            <Grid ColumnDefinitions="Auto,*" Margin="10">
-              <Button Content="{Binding AudioToggleLabel}" Tag="toggle-audio" Click="ActionClick" Padding="20,2" VerticalAlignment="Top"/>
-              <Label Grid.Column="1" Margin="10,0,0,0" FontSize="14" VerticalAlignment="Top" HorizontalContentAlignment="Stretch">
-                <TextBlock Text="{DynamicResource pauseHintNew}" TextWrapping="Wrap"/>
-              </Label>
-            </Grid>
-          </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="10,0,10,10">
-        <StackPanel Orientation="Horizontal" Spacing="10" Height="26" VerticalAlignment="Bottom"><Button Content="{DynamicResource startPreview}" Tag="start-preview" Click="ActionClick" Padding="20,0" IsEnabled="{Binding CanStart}"/><Button Content="{DynamicResource stop}" Tag="stop" Click="ActionClick" Padding="20,0" IsEnabled="{Binding IsBusy}"/></StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Height="30" VerticalAlignment="Bottom"><Label Content="{DynamicResource language}" VerticalAlignment="Top"/><ComboBox x:Name="LanguageSelect" Width="120" SelectionChanged="LanguageChanged"/></StackPanel>
-      </Grid>
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"><Label Content="Opacity"/><local:ValueSlider x:Name="BackgroundOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding BackgroundOpacityPercent}" IsEnabled="{Binding UseBackground}"/><TextBlock Grid.Column="2" Text="%" Classes="hint"/></Grid>
+        </StackPanel></Border>
+        <Border Classes="card" IsEnabled="{Binding NotRendering}"><StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Drop shadow" Classes="section-title"/><CheckBox Grid.Column="1" Content="Enable shadow" IsChecked="{Binding ShadowEnabled}"/></Grid>
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="12" IsEnabled="{Binding ShadowEnabled}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Label Content="Blur" MinWidth="58" ToolTip.Tip="Output pixels"/><local:ValueSlider Grid.Column="1" Minimum="0" Maximum="64" TrueMinimum="0" TrueMaximum="64" DecimalPlaces="0" Step="1" Value="{Binding ShadowBlurPixels}"/><TextBlock Grid.Column="2" Text="px" Classes="hint"/></Grid>
+            <Grid Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Label Content="Direction" MinWidth="58"/><local:ValueSlider Grid.Column="1" Minimum="0" Maximum="360" TrueMinimum="0" TrueMaximum="360" DecimalPlaces="0" Step="1" Value="{Binding ShadowAngleDegrees}"/><TextBlock Grid.Column="2" Text="°" Classes="hint"/></Grid>
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Label Content="Distance" MinWidth="58" ToolTip.Tip="Output pixels"/><local:ValueSlider Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding ShadowDistancePixels}"/><TextBlock Grid.Column="2" Text="px" Classes="hint"/></Grid>
+            <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Label Content="Opacity" MinWidth="58"/><local:ValueSlider Grid.Column="1" Minimum="0" Maximum="100" TrueMinimum="0" TrueMaximum="100" DecimalPlaces="0" Step="1" Value="{Binding ShadowOpacityPercent}"/><TextBlock Grid.Column="2" Text="%" Classes="hint"/></Grid>
+          </Grid>
+          <TextBlock Text="Shadows the transparent foreground. Disable the skin’s own background to reveal note shadows." Classes="hint" TextWrapping="Wrap"/>
+        </StackPanel></Border>
+        <Border Classes="card"><StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="14"><TextBlock Text="{DynamicResource previewOptions}" Classes="section-title"/><Label Grid.Column="1" Content="{DynamicResource tempo}" Margin="12,0,0,0"/><local:ValueSlider Grid.Column="2" x:Name="TempoSlider" Minimum="0.0625" Maximum="64" TrueMinimum="0.01" TrueMaximum="1000" Value="{Binding TempoMultiplier}" Logarithmic="True" DecimalPlaces="2"/></Grid>
+          <Grid ColumnDefinitions="*,*,*"><CheckBox Content="{DynamicResource vsync}" IsChecked="{Binding Vsync}"/><CheckBox Grid.Column="1" Content="{DynamicResource paused}" IsChecked="{Binding Paused}"/><CheckBox Grid.Column="2" Content="{DynamicResource realtimePlayback}" IsChecked="{Binding RealtimePlayback}"/></Grid>
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"><Button Content="{Binding AudioToggleLabel}" Tag="toggle-audio" Click="ActionClick"/><TextBlock Grid.Column="1" Text="{DynamicResource pauseHintNew}" Classes="hint" TextWrapping="Wrap"/></Grid>
+        </StackPanel></Border>
+      </StackPanel></ScrollViewer>
+      <Border Grid.Row="1" Classes="footer"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="primary" Content="{DynamicResource startPreview}" Tag="start-preview" Click="ActionClick" IsEnabled="{Binding CanStart}" MinWidth="130"/><Button Content="{DynamicResource stop}" Tag="stop" Click="ActionClick" IsEnabled="{Binding IsBusy}" MinWidth="70"/></StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"><Label Content="Theme"/><ComboBox x:Name="ThemeSelect" Width="170" SelectionChanged="ThemeChanged" ToolTip.Tip="Interface theme"/><Label Content="{DynamicResource language}" Margin="8,0,0,0"/><ComboBox x:Name="LanguageSelect" Width="105" SelectionChanged="LanguageChanged"/></StackPanel>
+      </Grid></Border>
     </Grid>
-    <Grid Grid.Row="1" x:Name="ModulesPage" IsVisible="False" Margin="10" RowDefinitions="*,Auto">
-      <Grid ColumnDefinitions="170,*">
-        <Grid RowDefinitions="26,*"><Button Content="{DynamicResource reload}" Tag="reload-modules" Click="ActionClick"/><ListBox Grid.Row="1" x:Name="ModulesList" Margin="0,10,0,0" SelectionChanged="ModuleSelected"/></Grid>
-        <Image Grid.Column="1" x:Name="ModulePreview" Margin="10,0,0,0" Stretch="Uniform"/>
-      </Grid>
-      <TextBox Grid.Row="1" Text="{Binding ModuleDescription}" Margin="0,10,0,0" MinHeight="100" Classes="description" TextAlignment="Center" TextWrapping="Wrap" IsReadOnly="True"/>
+    <Grid Grid.Row="1" x:Name="ModulesPage" IsVisible="False" Margin="16" ColumnDefinitions="200,*" ColumnSpacing="12">
+      <Border Classes="card"><Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="{DynamicResource modulesTab}" Classes="section-title"/><ListBox Grid.Row="1" x:Name="ModulesList" SelectionChanged="ModuleSelected"/><Button Grid.Row="2" Content="{DynamicResource reload}" Tag="reload-modules" Click="ActionClick"/></Grid></Border>
+      <Border Grid.Column="1" Classes="card"><Grid RowDefinitions="*,Auto" RowSpacing="12"><Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource ZenithPreviewWellBrush}"><Image x:Name="ModulePreview" Stretch="Uniform"/></Border><TextBox Grid.Row="1" Text="{Binding ModuleDescription}" MinHeight="84" MaxHeight="140" Classes="description" TextWrapping="Wrap" IsReadOnly="True"/></Grid></Border>
     </Grid>
-    <Grid Grid.Row="1" x:Name="ModuleSettingsPage" IsVisible="False">
-      <TabControl x:Name="ScriptedTabs" Margin="10">
+    <Grid Grid.Row="1" x:Name="ModuleSettingsPage" IsVisible="False" Margin="16">
+      <TabControl x:Name="ScriptedTabs">
         <TabItem Header="{DynamicResource resourcesTab}">
-          <Grid Margin="10" ColumnDefinitions="204*,371*,199*">
-            <Grid RowDefinitions="26,26,*,26">
+          <Grid Margin="0,8,0,0" ColumnDefinitions="190,*,180" ColumnSpacing="12">
+            <Border Classes="card"><Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
               <Button Content="{DynamicResource reloadList}" Tag="reload-skins" Click="ActionClick"/>
-              <Button Grid.Row="1" Content="{DynamicResource reloadScript}" Tag="reload-script" Click="ActionClick" Margin="0,10,0,-10"/>
-              <ListBox Grid.Row="2" x:Name="SkinsList" SelectionChanged="SkinSelected" Margin="0,20,0,10"/>
+              <Button Grid.Row="1" Content="{DynamicResource reloadScript}" Tag="reload-script" Click="ActionClick"/>
+              <ListBox Grid.Row="2" x:Name="SkinsList" SelectionChanged="SkinSelected"/>
               <Button Grid.Row="3" Content="{DynamicResource openFolder}" Tag="open-skins-folder" Click="ActionClick"/>
-            </Grid>
-            <Grid Grid.Column="1" Margin="10,0" RowDefinitions="*,Auto"><Image x:Name="SkinPreview" Stretch="Uniform"/><TextBox Grid.Row="1" Text="{Binding SkinDescription}" MinHeight="100" Classes="description" TextAlignment="Center" TextWrapping="Wrap" IsReadOnly="True" Margin="0,10,0,0"/></Grid>
-            <Grid Grid.Column="2" RowDefinitions="26,*,Auto,Auto,26">
+            </Grid></Border>
+            <Border Grid.Column="1" Classes="card"><Grid RowDefinitions="*,Auto" RowSpacing="12"><Border Background="{DynamicResource ZenithPreviewWellBrush}" CornerRadius="8" ClipToBounds="True"><Image x:Name="SkinPreview" Stretch="Uniform"/></Border><TextBox Grid.Row="1" Text="{Binding SkinDescription}" MinHeight="90" MaxHeight="140" Classes="description" TextWrapping="Wrap" IsReadOnly="True"/></Grid></Border>
+            <Border Grid.Column="2" Classes="card"><Grid RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="8">
               <Button Content="{DynamicResource palettes_reload}" Tag="reload-palettes" Click="ActionClick"/>
-              <ListBox Grid.Row="1" x:Name="PalettesList" Margin="0,10,0,10" SelectionChanged="PaletteSelected"/>
-              <CheckBox Grid.Row="2" Content="{DynamicResource palettes_randomise}" IsChecked="{Binding RandomizePalette}" IsCheckedChanged="RandomizePaletteChanged" Margin="0,0,0,10" FontSize="12"/>
-              <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,0,0,10">
-                <Button Content="{DynamicResource palettes_new}" Tag="new-palette" Click="ActionClick" Padding="5,2" FontSize="12" Margin="0,0,3,0"/>
-                <Button Grid.Column="1" Content="{DynamicResource palettes_edit}" Tag="edit-palette" Click="ActionClick" Padding="5,2" FontSize="12" Margin="3,0,0,0"/>
-              </Grid>
+              <ListBox Grid.Row="1" x:Name="PalettesList" SelectionChanged="PaletteSelected"/>
+              <CheckBox Grid.Row="2" Content="{DynamicResource palettes_randomise}" IsChecked="{Binding RandomizePalette}" IsCheckedChanged="RandomizePaletteChanged" FontSize="11"/>
+              <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="6"><Button Classes="primary" Content="New…" ToolTip.Tip="{DynamicResource palettes_new}" Tag="new-palette" Click="ActionClick" Padding="5,2" FontSize="12"/><Button Grid.Column="1" Content="Edit…" ToolTip.Tip="{DynamicResource palettes_edit}" Tag="edit-palette" Click="ActionClick" Padding="5,2" FontSize="12"/></Grid>
               <Button Grid.Row="4" Content="{DynamicResource palettes_openFolder}" Tag="open-palettes-folder" Click="ActionClick" FontSize="12" Padding="5,2"/>
-            </Grid>
+            </Grid></Border>
           </Grid>
         </TabItem>
         <TabItem Header="{DynamicResource settingsTab}" x:Name="ScriptSettingsTab">
-          <Grid Margin="10,10,10,0" RowDefinitions="Auto,*">
-            <Grid x:Name="ProfilePanel" IsVisible="False" ColumnDefinitions="Auto,120,120,Auto,Auto,*,Auto" Margin="0,0,0,10">
-              <Label Content="{DynamicResource profile}"/><ComboBox Grid.Column="1" x:Name="ProfileSelect" Margin="5,0,0,0" HorizontalAlignment="Stretch" SelectionChanged="ProfileSelected"/><TextBox Grid.Column="2" Text="{Binding ProfileName}" Margin="5,0,0,0"/>
-              <Button Grid.Column="3" Content="{DynamicResource save}" Tag="save-profile" Click="ActionClick" IsEnabled="{Binding CanSaveProfile}" Margin="5,0,0,0" Padding="20,0"/><Button Grid.Column="4" Content="{DynamicResource delete}" Tag="delete-profile" Click="ActionClick" IsEnabled="{Binding CanDeleteProfile}" Margin="5,0,0,0" Padding="20,0"/><Button Grid.Column="6" Content="{DynamicResource defaults}" Tag="default-profile" Click="ActionClick" Padding="20,0"/>
+          <Border Classes="card" Margin="0,8,0,0"><Grid RowDefinitions="Auto,*" RowSpacing="12">
+            <Grid x:Name="ProfilePanel" IsVisible="False" ColumnDefinitions="Auto,140,*,Auto,Auto,Auto" ColumnSpacing="8">
+              <Label Content="{DynamicResource profile}"/><ComboBox Grid.Column="1" x:Name="ProfileSelect" HorizontalAlignment="Stretch" SelectionChanged="ProfileSelected"/><TextBox Grid.Column="2" Text="{Binding ProfileName}" MinWidth="90" Watermark="Profile name"/>
+              <Button Grid.Column="3" Content="{DynamicResource save}" Tag="save-profile" Click="ActionClick" IsEnabled="{Binding CanSaveProfile}"/><Button Grid.Column="4" Content="{DynamicResource delete}" Tag="delete-profile" Click="ActionClick" IsEnabled="{Binding CanDeleteProfile}"/><Button Grid.Column="5" Content="{DynamicResource defaults}" Tag="default-profile" Click="ActionClick"/>
             </Grid>
-            <ScrollViewer Grid.Row="1"><StackPanel x:Name="ScriptSettingsPanel"/></ScrollViewer>
-          </Grid>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="ScriptSettingsPanel"/></ScrollViewer>
+          </Grid></Border>
         </TabItem>
-        <TabItem Header="{DynamicResource miscTab}"><StackPanel Margin="10">
-          <StackPanel Orientation="Horizontal"><Label Content="{DynamicResource firstNote}"/><NumericUpDown Value="{Binding FirstNote}" Minimum="0" Maximum="254" Width="80" Margin="5,0,0,0"/><Label Content="{DynamicResource lastNote}" Margin="10,0,0,0"/><NumericUpDown Value="{Binding LastNote}" Minimum="1" Maximum="255" Width="80" Margin="5,0,0,0"/></StackPanel>
-          <StackPanel Orientation="Horizontal" Margin="0,10,0,0"><Label Content="{DynamicResource noteScreenTime}"/><local:ValueSlider Width="305" Value="{Binding NoteScreenTime}" Minimum="4" Maximum="4096" TrueMinimum="1" TrueMaximum="100000" DecimalPlaces="2" Logarithmic="True"/></StackPanel>
-        </StackPanel></TabItem>
+        <TabItem Header="{DynamicResource miscTab}"><ScrollViewer><Border Classes="card" Margin="0,8,0,0"><StackPanel Spacing="14">
+          <Grid ColumnDefinitions="Auto,100,Auto,100" ColumnSpacing="12"><Label Content="{DynamicResource firstNote}"/><NumericUpDown Grid.Column="1" Value="{Binding FirstNote}" Minimum="0" Maximum="254"/><Label Grid.Column="2" Content="{DynamicResource lastNote}" Margin="12,0,0,0"/><NumericUpDown Grid.Column="3" Value="{Binding LastNote}" Minimum="1" Maximum="255"/></Grid>
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12"><Label Content="{DynamicResource noteScreenTime}"/><local:ValueSlider Grid.Column="1" Value="{Binding NoteScreenTime}" Minimum="4" Maximum="4096" TrueMinimum="1" TrueMaximum="100000" DecimalPlaces="2" Logarithmic="True"/></Grid>
+        </StackPanel></Border></ScrollViewer></TabItem>
       </TabControl>
-      <ContentControl x:Name="BuiltinSettingsHost" IsVisible="False"/>
+      <Border Classes="card" IsVisible="{Binding IsVisible, ElementName=BuiltinSettingsHost}"><ContentControl x:Name="BuiltinSettingsHost" IsVisible="False"/></Border>
     </Grid>
     <Grid Grid.Row="1" x:Name="RenderPage" IsVisible="False" RowDefinitions="*,Auto">
-      <ScrollViewer><StackPanel Margin="10">
-        <Grid ColumnDefinitions="Auto,Auto,*"><Label Content="{DynamicResource savePath}"/><Button Grid.Column="1" Content="{DynamicResource browse}" Tag="browse-video" Click="ActionClick" Margin="10,0,0,0" Padding="20,0" IsEnabled="{Binding NotRendering}"/><TextBox Grid.Column="2" Text="{Binding VideoPath}" IsReadOnly="True" Margin="10,0,0,0"/></Grid>
-        <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,10,0,0"><CheckBox Content="{DynamicResource includeAudio}" IsChecked="{Binding IncludeAudio}" IsEnabled="{Binding NotRendering}"/><Button Grid.Column="1" Content="{DynamicResource browse}" Tag="browse-audio" Click="ActionClick" Margin="10,0,0,0" Padding="20,0" IsEnabled="{Binding IncludeAudio}"/><TextBox Grid.Column="2" Text="{Binding AudioPath}" IsReadOnly="True" Margin="10,0,0,0"/></Grid>
-        <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,10,0,0"><CheckBox Content="{DynamicResource renderMask}" IsChecked="{Binding IncludeAlpha}" IsEnabled="{Binding NotRendering}"/><Button Grid.Column="1" Content="{DynamicResource browse}" Tag="browse-alpha" Click="ActionClick" Margin="10,0,0,0" Padding="20,0" IsEnabled="{Binding IncludeAlpha}"/><TextBox Grid.Column="2" Text="{Binding AlphaPath}" IsReadOnly="True" Margin="10,0,0,0"/></Grid>
-        <StackPanel Orientation="Horizontal" Margin="3,30,0,0"><RadioButton Content="{DynamicResource bitrate}" GroupName="EncodingMode" IsChecked="{Binding UseBitrate}" IsEnabled="{Binding NotRendering}"/><NumericUpDown Value="{Binding Bitrate}" Minimum="1" Maximum="2000000" Width="118" Margin="10,0,0,0" IsEnabled="{Binding UseBitrate}"/><Label Content="kbps" Margin="5,0,0,0"/></StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="3,10,0,0"><RadioButton Content="crf" GroupName="EncodingMode" IsChecked="{Binding UseCrf}" IsEnabled="{Binding NotRendering}"/><NumericUpDown Value="{Binding Crf}" Minimum="0" Maximum="51" Width="64" Margin="10,0,0,0" IsEnabled="{Binding UseCrf}"/><ComboBox x:Name="CrfPresetSelect" Width="122" Margin="10,0,0,0" SelectedItem="{Binding CrfPreset}" IsEnabled="{Binding UseCrf}"/><Label Content="{DynamicResource crfHint}" Margin="10,0,0,0" FontSize="13"/></StackPanel>
-        <RadioButton Content="{DynamicResource Custom}" GroupName="EncodingMode" IsChecked="{Binding UseCustomFfmpeg}" IsEnabled="{Binding NotRendering}" Margin="3,10,0,0"/>
-        <TextBox Text="{Binding FfmpegOptions}" AcceptsReturn="True" TextWrapping="Wrap" Height="50" Margin="20,5,0,0" IsEnabled="{Binding UseCustomFfmpeg}"/>
-        <StackPanel Orientation="Horizontal" Margin="0,30,0,0"><Label Content="{DynamicResource delatStart}"/><NumericUpDown Value="{Binding DelaySeconds}" Minimum="0" Maximum="10" Width="82" IsEnabled="{Binding NotRendering}"/></StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Spacing="10"><Button Content="{DynamicResource startRender}" Tag="start-render" Click="ActionClick" Padding="20,0" IsEnabled="{Binding CanStart}"/><Button Content="{DynamicResource stop}" Tag="stop" Click="ActionClick" Padding="20,0" IsEnabled="{Binding IsBusy}"/><CheckBox Content="{DynamicResource ffmpegDebug}" IsChecked="{Binding FfmpegDebug}" IsEnabled="{Binding NotRendering}"/></StackPanel>
+      <ScrollViewer><StackPanel Margin="16,16,16,12" Spacing="12">
+        <Border Classes="card"><StackPanel Spacing="10"><TextBlock Text="Output files" Classes="section-title"/>
+          <Grid ColumnDefinitions="200,*,Auto" ColumnSpacing="12"><Label Content="{DynamicResource savePath}"/><TextBox Grid.Column="1" Text="{Binding VideoPath}" IsReadOnly="True" ToolTip.Tip="{Binding VideoPath}"/><Button Grid.Column="2" Content="{DynamicResource browse}" Tag="browse-video" Click="ActionClick" IsEnabled="{Binding NotRendering}"/></Grid>
+          <Grid ColumnDefinitions="200,*,Auto" ColumnSpacing="12"><CheckBox Content="{DynamicResource includeAudio}" IsChecked="{Binding IncludeAudio}" IsEnabled="{Binding NotRendering}"/><TextBox Grid.Column="1" Text="{Binding AudioPath}" IsReadOnly="True" ToolTip.Tip="{Binding AudioPath}"/><Button Grid.Column="2" Content="{DynamicResource browse}" Tag="browse-audio" Click="ActionClick" IsEnabled="{Binding IncludeAudio}"/></Grid>
+          <Grid ColumnDefinitions="200,*,Auto" ColumnSpacing="12"><CheckBox Content="{DynamicResource renderMask}" IsChecked="{Binding IncludeAlpha}" IsEnabled="{Binding NotRendering}"/><TextBox Grid.Column="1" Text="{Binding AlphaPath}" IsReadOnly="True" ToolTip.Tip="{Binding AlphaPath}"/><Button Grid.Column="2" Content="{DynamicResource browse}" Tag="browse-alpha" Click="ActionClick" IsEnabled="{Binding IncludeAlpha}"/></Grid>
+        </StackPanel></Border>
+        <Border Classes="card"><StackPanel Spacing="12"><TextBlock Text="Encoding" Classes="section-title"/>
+          <Grid ColumnDefinitions="210,120,Auto,*" ColumnSpacing="10"><RadioButton Content="Apple hardware · H.264" GroupName="EncodingMode" IsChecked="{Binding UseHardwareEncoding}" IsEnabled="{Binding NotRendering}"/><NumericUpDown Grid.Column="1" Value="{Binding Bitrate}" Minimum="1" Maximum="2000000" IsEnabled="{Binding UseHardwareEncoding}"/><Label Grid.Column="2" Content="kbps"/><TextBlock Grid.Column="3" Text="Faster export · uses a target bitrate" Classes="hint" TextWrapping="Wrap"/></Grid>
+          <Grid ColumnDefinitions="210,120,Auto,*" ColumnSpacing="10"><RadioButton Content="{DynamicResource bitrate}" GroupName="EncodingMode" IsChecked="{Binding UseBitrate}" IsEnabled="{Binding NotRendering}"/><NumericUpDown Grid.Column="1" Value="{Binding Bitrate}" Minimum="1" Maximum="2000000" IsEnabled="{Binding UseBitrate}"/><Label Grid.Column="2" Content="kbps"/></Grid>
+          <Grid ColumnDefinitions="210,120,130,*" ColumnSpacing="10"><RadioButton Content="CRF" GroupName="EncodingMode" IsChecked="{Binding UseCrf}" IsEnabled="{Binding NotRendering}"/><NumericUpDown Grid.Column="1" Value="{Binding Crf}" Minimum="0" Maximum="51" IsEnabled="{Binding UseCrf}"/><ComboBox Grid.Column="2" x:Name="CrfPresetSelect" HorizontalAlignment="Stretch" SelectedItem="{Binding CrfPreset}" IsEnabled="{Binding UseCrf}"/><TextBlock Grid.Column="3" Text="{DynamicResource crfHint}" Classes="hint" TextWrapping="Wrap"/></Grid>
+          <RadioButton Content="{DynamicResource Custom}" GroupName="EncodingMode" IsChecked="{Binding UseCustomFfmpeg}" IsEnabled="{Binding NotRendering}"/>
+          <TextBox Text="{Binding FfmpegOptions}" AcceptsReturn="True" TextWrapping="Wrap" Height="58" IsEnabled="{Binding UseCustomFfmpeg}"/>
+          <Grid ColumnDefinitions="Auto,90,*,Auto" ColumnSpacing="12"><Label Content="{DynamicResource delatStart}"/><NumericUpDown Grid.Column="1" Value="{Binding DelaySeconds}" Minimum="0" Maximum="10" IsEnabled="{Binding NotRendering}"/><CheckBox Grid.Column="3" Content="{DynamicResource ffmpegDebug}" IsChecked="{Binding FfmpegDebug}" IsEnabled="{Binding NotRendering}"/></Grid>
+        </StackPanel></Border>
+        <Border Classes="card"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="16"><TextBlock Text="{DynamicResource ifUploading}" Classes="hint"/><TextBox Grid.Column="1" Text="{Binding CreditText}" AcceptsReturn="True" IsReadOnly="True" TextWrapping="Wrap" MinHeight="50"/></Grid></Border>
       </StackPanel></ScrollViewer>
-      <StackPanel Grid.Row="1" Margin="10"><Label Content="{DynamicResource ifUploading}"/><TextBox Text="{Binding CreditText}" AcceptsReturn="True" IsReadOnly="True" TextWrapping="Wrap" Width="281" HorizontalAlignment="Left"/></StackPanel>
+      <Border Grid.Row="1" Classes="footer"><StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="primary" Content="{DynamicResource startRender}" Tag="start-render" Click="ActionClick" IsEnabled="{Binding CanStart}" MinWidth="130"/><Button Content="{DynamicResource stop}" Tag="stop" Click="ActionClick" IsEnabled="{Binding IsBusy}" MinWidth="70"/></StackPanel></Border>
     </Grid>
-    <Border Grid.Row="2" x:Name="StatusBar" IsVisible="False" Background="#202723" BorderBrush="#303E34" BorderThickness="1" CornerRadius="12" Padding="12,8" Margin="10,0,10,10">
-      <StackPanel Spacing="8">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-          <Border Width="7" Height="7" CornerRadius="4" Background="#89DCA0" VerticalAlignment="Center"/>
-          <TextBlock Grid.Column="1" x:Name="StatusText" FontSize="12" Foreground="#D8E6DC" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}"/>
-          <Button Grid.Column="2" x:Name="ShowPreviewButton" Classes="status-action" Content="Show preview" Tag="show-preview" Click="ActionClick" IsVisible="{Binding IsPreviewing}"/>
-        </Grid>
-        <ProgressBar x:Name="TaskProgress" Value="{Binding Progress}" Maximum="1" Height="3" MinHeight="0" Background="#34463A" Foreground="#89DCA0" IsVisible="False"/>
-      </StackPanel>
+    <Border Grid.Row="2" x:Name="StatusBar" IsVisible="False" Background="{DynamicResource ZenithSurfaceBrush}" BorderBrush="{DynamicResource ZenithBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12,8" Margin="16,0,16,12">
+      <StackPanel Spacing="8"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Border Width="7" Height="7" CornerRadius="4" Background="{DynamicResource ZenithAccentBrush}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" x:Name="StatusText" FontSize="12" Foreground="{DynamicResource ZenithTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Status}"/><Button Grid.Column="2" x:Name="ShowPreviewButton" Classes="status-action" Content="Show preview" Tag="show-preview" Click="ActionClick" IsVisible="{Binding IsPreviewing}"/></Grid><ProgressBar x:Name="TaskProgress" Value="{Binding Progress}" Maximum="1" Height="3" MinHeight="0" Background="{DynamicResource ZenithBorderBrush}" Foreground="{DynamicResource ZenithAccentBrush}" IsVisible="False"/></StackPanel>
     </Border>
   </Grid>
 </Window>
