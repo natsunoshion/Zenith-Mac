@@ -1,0 +1,102 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <!-- Original Zenith controls and popups use square corners. The explicit
+         3px window buttons and checkboxes below retain their original shape. -->
+    <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
+    <Color x:Key="SystemAccentColor">#2E7D32</Color><Color x:Key="SystemAccentColorDark1">#2E7D32</Color><Color x:Key="SystemAccentColorLight1">#43A047</Color>
+  </Styles.Resources>
+  <Style Selector="Window">
+    <Setter Property="Background" Value="#171717"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="FontFamily" Value="Segoe UI, Arial, Helvetica"/>
+    <Setter Property="FontSize" Value="14"/>
+  </Style>
+  <Style Selector="TextBlock"><Setter Property="Foreground" Value="White"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <Style Selector="Label"><Setter Property="Foreground" Value="White"/><Setter Property="Padding" Value="5"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <!-- The outer border owns every button state. Explicit transparent content
+       prevents Fluent pointer/pressed backgrounds from adding a second layer. -->
+  <Style Selector="Button">
+    <Setter Property="Background" Value="#2E7D32"/><Setter Property="Foreground" Value="White"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+    <Setter Property="CornerRadius" Value="0"/><Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="15,2"/><Setter Property="MinHeight" Value="26"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template"><ControlTemplate><Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"><ContentPresenter Name="PART_ContentPresenter" Background="Transparent" BorderThickness="0" BorderBrush="Transparent" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/></Border></ControlTemplate></Setter>
+  </Style>
+  <Style Selector="Button:pointerover"><Setter Property="Background" Value="#43A047"/></Style>
+  <Style Selector="Button:pressed"><Setter Property="Background" Value="#66BB6A"/></Style>
+  <Style Selector="Button:disabled"><Setter Property="Background" Value="#222222"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="Button.window"><Setter Property="Width" Value="20"/><Setter Property="Height" Value="20"/><Setter Property="MinHeight" Value="20"/><Setter Property="Padding" Value="0"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="DarkGray"/><Setter Property="CornerRadius" Value="3"/></Style>
+  <Style Selector="Button.nav"><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="10,0"/><Setter Property="Height" Value="50"/></Style>
+  <Style Selector="Button.nav:pointerover"><Setter Property="Background" Value="#18FFFFFF"/></Style>
+  <Style Selector="Button.nav.active"><Setter Property="Background" Value="#33FFFFFF"/></Style>
+  <Style Selector="TextBox"><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="5,2"/><Setter Property="Background" Value="#222222"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="BorderBrush" Value="#666666"/><Setter Property="CornerRadius" Value="0"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="TextBox[AcceptsReturn=True]"><Setter Property="VerticalContentAlignment" Value="Top"/></Style>
+  <Style Selector="TextBox:disabled"><Setter Property="Opacity" Value="1"/><Setter Property="Foreground" Value="#999999"/></Style>
+  <Style Selector="TextBox.description"><Setter Property="Background" Value="#181818"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="#333333"/><Setter Property="Padding" Value="10"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="26"/><Setter Property="Height" Value="28"/><Setter Property="Padding" Value="5,0"/><Setter Property="Background" Value="#252525"/><Setter Property="BorderBrush" Value="#666666"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="CornerRadius" Value="0"/><Setter Property="FormatString" Value="0"/></Style>
+  <!-- NumericUpDown forwards its alignment into the template TextBox; setting
+       only the nested TextBox loses to that template binding. -->
+  <Style Selector="NumericUpDown /template/ ButtonSpinner">
+    <Setter Property="MinHeight" Value="26"/>
+    <Setter Property="Template"><ControlTemplate><Grid ColumnDefinitions="*,25" Height="26">
+      <Border BorderBrush="#2E7D32" BorderThickness="0,0,0,1" Margin="0,0,3,0"><ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"/></Border>
+      <!-- Keep the shadow background separate from its icon: a small shadowed
+           Border clips its child on Avalonia macOS/Skia. -->
+      <Grid Grid.Column="1" RowDefinitions="*,1,*" Height="25" Background="#171717">
+        <RepeatButton Name="PART_IncreaseButton" Classes="spinner" AutomationProperties.Name="Increase value" Foreground="White" MinWidth="0" MinHeight="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"><RepeatButton.Template><ControlTemplate><Grid><Border Name="SpinnerBorder" Background="{TemplateBinding Background}"/><PathIcon Data="M 0,3.3 L 6.5,0 L 13,3.3 L 12,5 L 6.5,2.2 L 1,5 Z" Width="13" Height="5" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid></ControlTemplate></RepeatButton.Template></RepeatButton>
+        <RepeatButton Name="PART_DecreaseButton" Classes="spinner" Grid.Row="2" AutomationProperties.Name="Decrease value" Foreground="White" MinWidth="0" MinHeight="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"><RepeatButton.Template><ControlTemplate><Grid><Border Name="SpinnerBorder" Background="{TemplateBinding Background}"/><PathIcon Data="M 0,1.7 L 6.5,5 L 13,1.7 L 12,0 L 6.5,2.8 L 1,0 Z" Width="13" Height="5" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid></ControlTemplate></RepeatButton.Template></RepeatButton>
+      </Grid>
+    </Grid></ControlTemplate></Setter>
+  </Style>
+  <Style Selector="RepeatButton.spinner"><Setter Property="Background" Value="#2E7D32"/><Setter Property="CornerRadius" Value="0"/></Style>
+  <Style Selector="RepeatButton.spinner:pointerover"><Setter Property="Background" Value="#43A047"/></Style>
+  <Style Selector="RepeatButton.spinner:pressed"><Setter Property="Background" Value="#66BB6A"/></Style>
+  <Style Selector="RepeatButton.spinner:disabled"><Setter Property="Background" Value="#222222"/></Style>
+  <!-- WPF keeps both arrows green at a numeric limit; only disabling the
+       whole number field grays them. Avalonia still clamps clicks at the limit. -->
+  <Style Selector="NumericUpDown:not(:disabled) /template/ ButtonSpinner /template/ RepeatButton.spinner:disabled"><Setter Property="Background" Value="#2E7D32"/></Style>
+
+  <Style Selector="NumericUpDown /template/ TextBox#PART_TextBox"><Setter Property="FontSize" Value="16"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Background" Value="Transparent"/><Setter Property="MinHeight" Value="26"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+  <Style Selector="ComboBox"><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="7,3"/><Setter Property="Background" Value="#222222"/><Setter Property="BorderBrush" Value="#666666"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="CornerRadius" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Left"/></Style>
+  <Style Selector="ComboBoxItem"><Setter Property="CornerRadius" Value="0"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+  <!-- State selectors override Fluent's template-local 12px glyph geometry. -->
+  <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Width" Value="9.3334"/><Setter Property="Height" Value="4.4483"/><Setter Property="Foreground" Value="#2E7D32"/>
+    <Setter Property="Data" Value="F1 M -2,0 L 2.667,2.66665 L 7.3334,0 L 7.3334,-1.78168 L 2.6667,0.88501 L -2,-1.78168 L -2,0 Z"/>
+  </Style>
+  <Style Selector="ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Width" Value="9.3334"/><Setter Property="Height" Value="4.4483"/><Setter Property="Foreground" Value="#777777"/>
+    <Setter Property="Data" Value="F1 M -2,0 L 2.667,2.66665 L 7.3334,0 L 7.3334,-1.78168 L 2.6667,0.88501 L -2,-1.78168 L -2,0 Z"/>
+  </Style>
+  <Style Selector="CheckBox"><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="0"/><Setter Property="Foreground" Value="White"/>
+    <Setter Property="Template"><ControlTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent"><Border Width="16" Height="16" BorderThickness="2" BorderBrush="#2E7D32" CornerRadius="3" Margin="4,0,0,0" VerticalAlignment="Center"><Border Name="CheckFill" Background="#2E7D32" CornerRadius="1" Margin="2" IsVisible="False"/></Border><ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="3,0,0,0" VerticalContentAlignment="Center"/></StackPanel></ControlTemplate></Setter>
+  </Style>
+  <Style Selector="CheckBox:checked /template/ Border#CheckFill"><Setter Property="IsVisible" Value="True"/></Style>
+  <Style Selector="CheckBox:disabled"><Setter Property="Opacity" Value="0.5"/></Style>
+  <Style Selector="RadioButton"><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="0"/><Setter Property="Foreground" Value="White"/>
+    <Setter Property="Template"><ControlTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent"><Border Width="16" Height="16" BorderThickness="2" BorderBrush="#2E7D32" CornerRadius="10" VerticalAlignment="Center"><Border Name="RadioFill" Background="#2E7D32" CornerRadius="10" Margin="2" IsVisible="False"/></Border><ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Margin="3,0,0,0" VerticalContentAlignment="Center"/></StackPanel></ControlTemplate></Setter>
+  </Style>
+  <Style Selector="RadioButton:checked /template/ Border#RadioFill"><Setter Property="IsVisible" Value="True"/></Style>
+  <Style Selector="RadioButton:disabled"><Setter Property="Opacity" Value="0.5"/></Style>
+  <Style Selector="Slider"><Setter Property="MinHeight" Value="26"/></Style>
+  <Style Selector="Slider /template/ Thumb"><Setter Property="MinWidth" Value="10"/><Setter Property="MinHeight" Value="10"/></Style>
+  <Style Selector="Slider:horizontal"><Setter Property="Template"><ControlTemplate><Grid MinHeight="{TemplateBinding MinHeight}" Margin="5,0"><Track Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value, Mode=TwoWay}" Orientation="Horizontal"><Track.DecreaseButton><RepeatButton Background="#CC2E7D32" Height="4" MinHeight="4" MinWidth="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Center"><RepeatButton.Template><ControlTemplate><Border Background="{TemplateBinding Background}"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseButton><Track.IncreaseButton><RepeatButton Background="#55000000" Height="4" MinHeight="4" MinWidth="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Center"><RepeatButton.Template><ControlTemplate><Border Background="{TemplateBinding Background}"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseButton><Track.Thumb><Thumb Width="10" Height="10" MinWidth="10" MinHeight="10"><Thumb.Template><ControlTemplate><Ellipse Fill="#2E7D32"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb></Track></Grid></ControlTemplate></Setter></Style>
+  <Style Selector="ListBox"><Setter Property="Background" Value="#111111"/><Setter Property="BorderBrush" Value="#444444"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="0"/></Style>
+  <Style Selector="ListBoxItem"><Setter Property="MinHeight" Value="26"/><Setter Property="Padding" Value="6,4"/><Setter Property="Foreground" Value="White"/></Style>
+  <Style Selector="ListBoxItem:selected"><Setter Property="Background" Value="#2E7D32"/></Style>
+  <Style Selector="TabControl"><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="0"/></Style>
+  <Style Selector="TabItem">
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="Padding" Value="10,5"/><Setter Property="MinHeight" Value="30"/><Setter Property="Background" Value="#11FFFFFF"/><Setter Property="FontSize" Value="14"/>
+    <Setter Property="Template"><ControlTemplate><Border Name="PART_Border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"><ContentPresenter Name="PART_ContentPresenter" Background="Transparent" BorderThickness="0" BorderBrush="Transparent" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/></Border></ControlTemplate></Setter>
+  </Style>
+  <Style Selector="TabItem:selected"><Setter Property="Background" Value="#33FFFFFF"/></Style>
+  <Style Selector="TabItem:pointerover"><Setter Property="Background" Value="#22FFFFFF"/></Style>
+  <Style Selector="ScrollViewer"><Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/></Style>
+</Styles>

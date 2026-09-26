@@ -1,0 +1,1 @@
+<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Zenith.Mac.App" Name="Zenith" RequestedThemeVariant="Dark"><Application.Styles><FluentTheme/><StyleInclude Source="avares://Zenith.Mac/Styles/ZenithTheme.axaml"/></Application.Styles></Application>

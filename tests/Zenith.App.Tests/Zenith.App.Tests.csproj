@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Zenith.Core/Zenith.Core.csproj" />
+    <ProjectReference Include="../../examples/GradientPlugin/GradientPlugin.csproj" />
+    <Compile Include="../../src/Zenith.Mac/RenderWorker.cs" Link="RenderWorker.cs" />
+    <Compile Include="../../src/Zenith.Mac/PreviewTiming.cs" Link="PreviewTiming.cs" />
+    <Compile Include="../../src/Zenith.Mac/RenderCompletion.cs" Link="RenderCompletion.cs" />
+  </ItemGroup>
+</Project>
