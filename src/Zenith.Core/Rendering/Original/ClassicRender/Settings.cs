@@ -1,0 +1,24 @@
+// Ported from arduano/Zenith-MIDI; original rendering algorithm retained. See THIRD_PARTY_NOTICES.md.
+using Bitmap = Zenith.Core.Rendering.RasterImage;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ClassicRender
+{
+    public class Settings
+    {
+        public int firstNote = 0;
+        public int lastNote = 128;
+        public double pianoHeight = 0.16;
+        public double deltaTimeOnScreen = 300;
+        public bool sameWidthNotes = true;
+        public bool blackNotesAbove = true;
+
+        public string palette = "Random";
+
+        public float noteBrightness = 1;
+    }
+}

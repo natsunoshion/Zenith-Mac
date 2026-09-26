@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Zenith.Core/Midi/**/*.cs" Link="Midi/%(Filename)%(Extension)" />
+    <Compile Include="../../src/Zenith.Core/Export/**/*.cs" Link="Export/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,25 @@
+**/bin/
+**/obj/
+.DS_Store
+artifacts/
+dist/
+assets/windows/
+Zenith.7z
+tests/fixtures/*.mp4
+
+# Local settings, credentials and signing material.
+.env
+.env.*
+!.env.example
+!.env.sample
+secrets/
+.secrets/
+*.p12
+*.pfx
+
+# IDE and tool caches.
+.vs/
+.idea/
+.cache/
+*.user
+*.suo
