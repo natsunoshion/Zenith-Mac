@@ -5,10 +5,8 @@
   <p>基于原版 Zenith 的 MIDI 解析、渲染算法与 Scripted 皮肤格式，面向 macOS 的全新 3.0.0 应用。</p>
 
   <h2>Demo</h2>
-  <p><a href="docs/images/demo-render-preview.png"><img src="docs/images/demo-render-preview.png" alt="Zenith seekable MIDI preview with a custom background and on-screen keyboard" width="100%" /></a></p>
-  <p><em>Seek through the MIDI preview with a custom background; Zenith also lets you adjust its opacity and crop position.</em></p>
-  <p><a href="docs/images/demo-palette-editor.png"><img src="docs/images/demo-palette-editor.png" alt="Zenith main interface with MIDI, render, background, and theme settings" width="100%" /></a></p>
-  <p><em>The main interface brings MIDI loading, render setup, background opacity and crop controls, and selectable themes together.</em></p>
+  <p><a href="docs/images/demo-render-preview.png"><img src="docs/images/demo-render-preview.png" alt="Zenith seekable MIDI preview with a custom background and on-screen keyboard" width="100%" /></a><br /><em>Seek through the MIDI preview with a custom background; Zenith also lets you adjust its opacity and crop position.</em></p>
+  <p><a href="docs/images/demo-palette-editor.png"><img src="docs/images/demo-palette-editor.png" alt="Zenith main interface with MIDI, render, background, and theme settings" width="100%" /></a><br /><em>The main interface brings MIDI loading, render setup, background opacity and crop controls, and selectable themes together.</em></p>
 
   <a href="https://github.com/natsunoshion/Zenith-Mac/releases"><img src="https://img.shields.io/badge/version-3.0.0-blue?style=flat-square" alt="Version 3.0.0" /></a>
   <a href="https://github.com/natsunoshion/Zenith-Mac/releases"><img src="https://img.shields.io/github/downloads/natsunoshion/Zenith-Mac/total.svg?style=flat-square" alt="Downloads" /></a>
